@@ -1,0 +1,10 @@
+.DS_Store
+.env
+*.env
+!config.example.env
+venv/
+.venv/
+__pycache__/
+node_modules/
+*.log
+*.lock

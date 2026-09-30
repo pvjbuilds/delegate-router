@@ -1,0 +1,173 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "delegate-router: how a task flows",
+    "quality_profile": "showcase"
+  },
+  "lanes": [
+    {
+      "id": "host",
+      "label": "Host agent: Claude Code or Codex, following the delegate skill"
+    },
+    {
+      "id": "delegates",
+      "label": "Delegate model: another subscription you already pay for"
+    },
+    {
+      "id": "support",
+      "label": "Kept current (optional)",
+      "variant": "exception"
+    }
+  ],
+  "mainPath": [
+    "task",
+    "judge",
+    "pick",
+    "spec",
+    "run",
+    "verify"
+  ],
+  "nodes": [
+    {
+      "id": "task",
+      "lane": "host",
+      "col": 0,
+      "type": "external",
+      "label": "Your task",
+      "sublabel": "bulk, already decided",
+      "width": 184
+    },
+    {
+      "id": "judge",
+      "lane": "host",
+      "col": 1,
+      "type": "backend",
+      "label": "Judge",
+      "sublabel": "4 gates, else host does it",
+      "width": 184
+    },
+    {
+      "id": "pick",
+      "lane": "host",
+      "col": 2,
+      "type": "backend",
+      "label": "Pick a model",
+      "sublabel": "installed, not the host",
+      "width": 184
+    },
+    {
+      "id": "spec",
+      "lane": "host",
+      "col": 3,
+      "type": "frontend",
+      "label": "Write the spec",
+      "sublabel": "every decision made",
+      "width": 184
+    },
+    {
+      "id": "verify",
+      "lane": "host",
+      "col": 5,
+      "type": "security",
+      "label": "Host verifies",
+      "sublabel": "run check, read diff",
+      "width": 184
+    },
+    {
+      "id": "run",
+      "lane": "delegates",
+      "col": 4,
+      "type": "cloud",
+      "label": "Delegate types",
+      "sublabel": "codex / agy / claude -p",
+      "width": 184
+    },
+    {
+      "id": "watch",
+      "lane": "support",
+      "col": 1,
+      "type": "messagebus",
+      "label": "model_watch.py",
+      "sublabel": "new releases, every 12 h",
+      "width": 184
+    },
+    {
+      "id": "routing",
+      "lane": "support",
+      "col": 2,
+      "type": "database",
+      "label": "ROUTING.md",
+      "sublabel": "task to model map",
+      "width": 184
+    },
+    {
+      "id": "scout",
+      "lane": "support",
+      "col": 3,
+      "type": "messagebus",
+      "label": "Jev scout",
+      "sublabel": "which files matter",
+      "width": 184
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-task-judge",
+      "from": "task",
+      "to": "judge"
+    },
+    {
+      "id": "e-judge-pick",
+      "from": "judge",
+      "to": "pick",
+      "label": "passes",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e-pick-spec",
+      "from": "pick",
+      "to": "spec"
+    },
+    {
+      "id": "e-spec-run",
+      "from": "spec",
+      "to": "run",
+      "label": "packet",
+      "variant": "emphasis",
+      "fromSide": "right"
+    },
+    {
+      "id": "e-run-verify",
+      "from": "run",
+      "to": "verify",
+      "label": "diff + summary",
+      "fromSide": "right",
+      "toSide": "bottom"
+    },
+    {
+      "id": "e-watch-routing",
+      "from": "watch",
+      "to": "routing",
+      "label": "flags",
+      "variant": "dashed",
+      "role": "async"
+    },
+    {
+      "id": "e-routing-pick",
+      "from": "routing",
+      "to": "pick",
+      "variant": "dashed"
+    },
+    {
+      "id": "e-scout-spec",
+      "from": "scout",
+      "to": "spec",
+      "label": "top files",
+      "variant": "dashed",
+      "role": "async",
+      "fromSide": "top",
+      "toSide": "bottom"
+    }
+  ]
+}
