@@ -33,7 +33,7 @@ If nothing in a row qualifies, the host does the work itself.
 | **Media and long reads**: images, PDF, video, audio, long documents | 1. Gemini 3.8 Flash<br>2. Claude Opus 5.5 | `agy` · `gemini-3.8-flash-high`<br>`opus-implementer` · `claude-opus-5-5` | (in the ID)<br>medium |
 | **Single-file text** with no repo access: a conversion, a fixture, a draft | 1. Gemini 3.8 Flash<br>2. GPT-6.1 Sol | `agy` · `gemini-3.8-flash-high`<br>`codex` · `gpt-6.1-sol` | (in the ID)<br>medium |
 | **Hard reasoning**: maths, proofs, algorithms, science, very large documents | 1. GPT-6 Astra | `codex` · `gpt-6-astra` | low, raise only if needed |
-| **Review**: security review, second opinion on a design or a diff | 1. GPT-6 Astra (read-only)<br>2. Claude Opus 5.5 (read-only) | `codex -s read-only` · `gpt-6-astra`<br>`claude -p --permission-mode plan` | low<br>medium |
+| **Review**: security review, second opinion on a design or a diff | 1. GPT-6 Astra (read-only)<br>2. Claude Opus 5.5 (read-only) | `codex -s read-only` · `gpt-6-astra`<br>`claude -p --restricted` · `claude-opus-5-5` (SKILL.md has the full command) | low<br>medium |
 
 **Quota out.** A usage-limit error usually names its reset time. Say it in one line and fall
 through to the next candidate; don't stall. If a CLI call fails, report that model as

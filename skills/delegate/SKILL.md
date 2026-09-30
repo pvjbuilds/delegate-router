@@ -1,6 +1,6 @@
 ---
 name: delegate
-description: "Hand bulky, already-decided implementation work from the agent you are working in (Claude Code or Codex CLI) to another paid model: Codex (GPT models), Gemini via the Antigravity `agy` CLI, or a Claude Opus subagent. Saves the main session's quota and context. Picks the model from ROUTING.md unless the user names one, and never routes back to the host's own model. Use for mechanical, large work: scaffolding, boilerplate, repetitive edits across many files, test stubs, docstrings, format conversions, a fully specified function or module, or bulk reading of media and long documents. Also use when the user says /delegate, \"delegate this\", \"send this to Codex/Gemini/Claude\", or \"don't burn tokens on this\". The host always plans, specs and verifies; the delegate only types. Do NOT delegate debugging, architecture, cross-file refactors, security code, anything subtle, or work under ~40 lines."
+description: "Hand bulky, already-decided implementation work from the agent you are working in (Claude Code or Codex CLI) to another paid model: Codex (GPT models), Gemini via the Antigravity `agy` CLI, or a Claude Opus subagent. Saves the main session's quota and context. Picks the model from ROUTING.md unless the user names one, and never routes back to the host's own model (except an Opus subagent under an Opus host, which keeps the main context clean). Use for mechanical, large work: scaffolding, boilerplate, repetitive edits across many files, test stubs, docstrings, format conversions, a fully specified function or module, or bulk reading of media and long documents. Also use when the user says /delegate, \"delegate this\", \"send this to Codex/Gemini/Claude\", or \"don't burn tokens on this\". The host always plans, specs and verifies; the delegate only types. Do NOT delegate debugging, architecture, cross-file refactors, security code, anything subtle, or work under ~40 lines."
 ---
 
 # Delegate
@@ -46,14 +46,17 @@ code.* Say so in one line and move on.
 
 ## 2. Pick the model
 
-1. **Check what's installed and new** (no network, under a second):
+1. **Check what's installed and new** (offline itself, under a second; with `BACKGROUND=1` it
+   may start a detached online check, at most every 12 h):
    `python3 <this skill's folder>/scripts/model_watch.py status`
    It prints the delegate CLIs on this machine, and any new model release it found. If it
    reports something new, tell the user once in one line, then carry on with the current map.
 2. **The user named a model?** Use it. Done.
 3. **Otherwise read [ROUTING.md](ROUTING.md)** (same folder) and take the row that matches the
    task. Walk its candidates in order and take the first one that is **installed** and is
-   **not the host's own model**. Don't route from memory.
+   **not the host's own model**. One exception: under an Opus host, the `opus-implementer`
+   subagent is allowed, because it keeps file reads and tool turns out of the main context.
+   Don't route from memory.
 
 ## 2b. Scout before the spec (optional, needs Jev)
 
@@ -98,25 +101,32 @@ codex exec -m <model> -c model_reasoning_effort=<effort> \
   when access is denied.
 - Run it in the background when the host allows it.
 
-### Gemini (`agy -p`): completion mode, text only
+### Gemini (`agy -p`): plan mode, text out
 
 ```bash
 mkdir -p <tmp>/handoff && cd <tmp>/handoff && \
-  agy -p "$(cat <tmp>/packet.md)" --model <model> --sandbox > <tmp>/gemini-out.txt 2> <tmp>/gemini-err.txt
+  agy -p "$(cat <tmp>/packet.md)" --model <model> --sandbox --mode plan \
+  < /dev/null > <tmp>/gemini-out.txt 2> <tmp>/gemini-err.txt
 ```
 
 - **Input files:** copy only the files it needs into the handoff folder, name them in the
   prompt, delete the copies afterwards. File content goes to Google.
 - **Code output:** end the spec with "Output ONLY code, no markdown fences, no commentary".
   Strip fences anyway, then write the result to the target file with a short script.
-- Gemini returns text only: no shell, no file edits, no image generation.
+- `agy -p` is an agent with tools. `--mode plan` stops it editing, `--sandbox` restricts its
+  terminal, and the empty handoff folder limits what it can read. Use its text output only;
+  it doesn't generate images.
 
 ### Claude: the `opus-implementer` subagent
 
 - **Host is Claude Code:** use the Agent tool with `subagent_type: "opus-implementer"` and the
   full spec. **Don't pass `model`**: a per-call model overrides the agent definition
   (Opus at medium effort). It spends Claude quota; what it saves is the host's context.
-- **Host is Codex:** run it as a CLI from the repo root:
+  It runs with **the host session's own permissions**, not a separate sandbox: the same
+  prompts and rules as if the host did the edit. For OS-level confinement, turn on Claude
+  Code's sandbox (`/sandbox`).
+- **Host is Codex:** run it as a CLI from the repo root. It runs inside Codex's
+  `workspace-write` sandbox, so its writes stay in the repo:
 
   ```bash
   cd <repo> && claude -p --agent opus-implementer --permission-mode acceptEdits \
@@ -124,8 +134,20 @@ mkdir -p <tmp>/handoff && cd <tmp>/handoff && \
   ```
 
   Codex's sandbox blocks network by default, so this call needs your approval, or
-  `network_access = true` in `~/.codex/config.toml` (see the README).
+  `network_access = true` in `~/.codex/config.toml` (see the README). Without network,
+  `claude` reports "Not logged in".
+- A user hook that writes outside the repo (a cache, a log) fails inside Codex's sandbox and
+  can block the prompt while `claude` still exits 0. Check `claude-out.md`, not the exit code.
+  If a hook is the cause, add `--settings '{"disableAllHooks":true}'` for this call only.
 - The agent reports back **only** the files changed and the check result, not the code.
+- **Claude as a read-only reviewer** (either host): no command tools, no user settings or MCP,
+  file tools confined to the repo:
+
+  ```bash
+  cd <repo> && claude -p --restricted --strict-mcp-config --tools "Read,Grep,Glob" \
+    --model claude-opus-5-5 --effort medium --permission-mode plan --no-session-persistence \
+    "$(cat <tmp>/packet.md)" < /dev/null > <tmp>/review.md
+  ```
 
 ## 4. Write the spec
 

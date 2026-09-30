@@ -39,8 +39,9 @@ if [ "$1" = debug ]; then
   else echo '{{"models":[{{"slug":"gpt-6-sol","visibility":"list"}},{{"slug":"gpt-hidden","visibility":"hide"}}]}}'; fi
 else while [ "$1" != -o ]; do shift; done; echo "${{PROBE_REPLY:-ok}}" > "$2"; fi
 """)
-stub(bindir / "brew", f'echo brew "$@" >> {calls}\n')
+stub(bindir / "brew", f'echo brew "$@" >> {calls}\nsleep "${{BREW_SLEEP:-0}}"\n')
 AGY = stub(bindir / "agy", f"""echo agy "$@" >> {calls}
+if [ "$1" = -p ]; then echo ok; exit; fi
 printf 'gemini-3.8-flash-high\\tGemini 3.8 Flash (High)\\n'
 printf 'rm -rf ~;echo\\tEvil\\n'
 """)
@@ -88,7 +89,7 @@ def test_release_is_confirmed_updated_and_probed_read_only():
     watch("run", **ON)
     log = calls.read_text()
     assert log.count("jev") == 1 and "brew upgrade --cask codex" in log, log
-    assert "exec -m gpt-6.2-sol -s read-only" in log, log
+    assert "exec -m gpt-6.2-sol -s read-only --skip-git-repo-check --ignore-user-config --ignore-rules --ephemeral" in log, log
     out = watch("status")
     assert "NEW RELEASE gpt-6.2-sol (codex): probe passed (updated)" in out, out
     watch("run", **ON)
@@ -152,7 +153,9 @@ def test_other_providers_update_themselves_and_probe_with_tools_off():
     log = calls.read_text()
     assert "claude update" in log and "agy update" in log, log
     assert "claude -p --model claude-opus-6 --tools  --strict-mcp-config" in log, log
-    assert "agy -p Reply with exactly: ok --model gemini-3.8-flash-high --sandbox" in log, log
+    assert "agy -p Reply with exactly: ok --model gemini-3.8-flash-high --sandbox --mode plan" in log, log
+    out = watch("status")
+    assert "claude-opus-6 (claude): probe passed" in out and "gemini-3.8-flash (agy): probe passed" in out, out
 
 
 def test_unsafe_names_from_a_cli_are_never_printed():
@@ -192,6 +195,27 @@ def test_status_stays_offline_and_background_can_be_switched_off():
             break
         time.sleep(0.1)
     assert "debug models" in calls.read_text()  # the detached run happened
+
+
+def test_scheduled_run_skips_when_a_recent_run_exists():
+    fresh()
+    calls.unlink()
+    watch("run", "--if-due")
+    assert not calls.exists()  # the first run was seconds ago
+    state = json.loads((tmp / "state/state.json").read_text())
+    state["last_run"] = 0
+    (tmp / "state/state.json").write_text(json.dumps(state))
+    watch("run", "--if-due")
+    assert "debug models" in calls.read_text()
+
+
+def test_run_stops_at_its_budget():
+    fresh()
+    announce("<p>gpt-6.2-sol and gpt-6.3-luna are available in Codex.</p>")
+    t = time.time()
+    watch("run", BREW_SLEEP="5", DELEGATE_ROUTER_BUDGET="1", **ON)
+    assert time.time() - t < 4, "the update ran past the budget"
+    assert "exec -m" not in calls.read_text()  # no probe started after the budget ran out
 
 
 def test_config_file_is_read_and_env_wins():

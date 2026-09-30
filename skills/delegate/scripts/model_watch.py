@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Update path for delegate-router: notice new models, optionally update the CLI and prove access.
 
-    model_watch.py status   no network. Prints installed delegate CLIs and anything new, and
-                            starts a detached `run` in the background when the last one is >12 h old.
+    model_watch.py status   no network itself. Prints installed delegate CLIs and anything new. With
+                            BACKGROUND=1 it also starts a detached `run --if-due`, which goes online.
     model_watch.py run      reads the model catalogs and the vendors' release notes. Optionally asks
                             Jev whether a new name is a real subscriber release, updates the CLI and
                             probes the model (AUTO_UPDATE_CLI=1).
+    model_watch.py run --if-due   the same, but only when the last run started >12 h ago.
     model_watch.py ack      marks everything currently known as reviewed (after refreshing ROUTING.md).
 
 Config: ${XDG_CONFIG_HOME:-~/.config}/delegate-router/config.env (see config.example.env).
@@ -44,7 +45,7 @@ NOTES = (E("DELEGATE_ROUTER_NOTES") or " ".join([
 CLAUDE_URL = E("DELEGATE_ROUTER_CLAUDE_URL") or "https://platform.claude.com/docs/en/models/overview"
 
 EVERY = 12 * 3600      # background run interval
-BUDGET = 15 * 60       # one run stops starting new work after this
+BUDGET = float(E("DELEGATE_ROUTER_BUDGET") or 15 * 60)  # hard cap on one run, in seconds
 MAX_LEADS = 10         # names looked at per run; the rest wait for the next run
 MAX_FETCH = 2 << 20    # bytes read per page
 STALE_DAYS = 60        # ROUTING.md snapshot age that counts as stale
@@ -114,11 +115,20 @@ def lock():
     return f
 
 
+DEADLINE = [float("inf")]  # set by run(); every subprocess gets at most the time left
+
+
+def left(timeout):
+    return min(timeout, DEADLINE[0] - time.time())
+
+
 def call(argv, timeout, cwd=None):
     """Never interactive: stdin is /dev/null, so an install prompt fails instead of hanging."""
+    if left(timeout) <= 0:
+        return None
     try:
         return subprocess.run(argv, capture_output=True, text=True, stdin=subprocess.DEVNULL,
-                              timeout=timeout, cwd=cwd or tempfile.gettempdir())
+                              timeout=left(timeout), cwd=cwd or tempfile.gettempdir())
     except (OSError, subprocess.SubprocessError):
         return None
 
@@ -177,7 +187,7 @@ def update(cli):
 
 
 def probe(name, catalog):
-    """One tiny prompt from an empty temp dir, with every tool off. Passes only on exit 0 + 'ok'."""
+    """One fixed prompt from an empty temp dir, user config and integrations off. Passes only on exit 0 + 'ok'."""
     cli = provider(name)
     b = binary(cli)
     if not b:
@@ -185,8 +195,8 @@ def probe(name, catalog):
     with tempfile.TemporaryDirectory() as d:
         if cli == "codex":
             out = os.path.join(d, "reply.txt")
-            argv = [b, "exec", "-m", name, "-s", "read-only", "--skip-git-repo-check",
-                    "-c", "model_reasoning_effort=low", "-o", out, PROBE]
+            argv = [b, "exec", "-m", name, "-s", "read-only", "--skip-git-repo-check", "--ignore-user-config",
+                    "--ignore-rules", "--ephemeral", "-c", "model_reasoning_effort=low", "-o", out, PROBE]
         elif cli == "claude":
             argv = [b, "-p", "--model", name, "--tools", "", "--strict-mcp-config",
                     "--setting-sources", "", "--no-session-persistence", PROBE]
@@ -194,7 +204,7 @@ def probe(name, catalog):
             slug = next((s for s in catalog.get("agy") or [] if s.startswith(name)), None)
             if not slug:
                 return False
-            argv = [b, "-p", PROBE, "--model", slug, "--sandbox"]
+            argv = [b, "-p", PROBE, "--model", slug, "--sandbox", "--mode", "plan"]
         for _ in range(3):
             r = call(argv, 180, cwd=d)
             reply = r.stdout if r else ""
@@ -214,7 +224,7 @@ def ask_jev(contexts):
     argv = [cmd] if cmd else [shutil.which("uv") or "uv", "run", "--quiet", str(SKILL_DIR / "scripts" / "jev.py")]
     try:
         r = subprocess.run(argv + ["ask", QUESTION, "--lines"], input="".join(json.dumps(c) + "\n" for c in contexts),
-                           capture_output=True, text=True, timeout=180)
+                           capture_output=True, text=True, timeout=max(left(180), 0.1))
         scores = {row["i"]: float(row["new_model"]) for row in map(json.loads, r.stdout.splitlines())}
     except Exception:
         return None
@@ -232,14 +242,18 @@ def known(st):
     return mapped | set(st.get("acked", []))
 
 
-def run():
+def run(if_due=False):
     held = lock()
     if not held:
         print("another run is in progress")
         return 0
     start = time.time()
+    DEADLINE[0] = start + BUDGET
     st = load()
+    if if_due and start - st.get("last_run", 0) <= EVERY:
+        return 0  # checked under the lock, so two sessions starting at once run it only once
     st["last_run"] = start
+    save(st)  # saved before going online, so a killed run still counts as an attempt
     first_run = "acked" not in st
     cat = st.setdefault("catalog", {})
     for cli, fn in (("codex", codex_catalog), ("agy", agy_catalog), ("claude", claude_catalog)):
@@ -253,6 +267,8 @@ def run():
     done = known(st) | {x["name"] for x in releases}
     leads = []
     for url in NOTES:
+        if time.time() > DEADLINE[0]:
+            break
         try:
             text = " ".join(re.sub(r"<[^>]+>", " ", fetch(url)).split())  # tags off: #gpt-61-sol anchors aren't names
         except Exception:
@@ -276,7 +292,7 @@ def run():
             leads, scores = [], {}
     updated = {}
     for i, (url, name, _, h) in enumerate(leads):
-        if time.time() - start > BUDGET:
+        if time.time() > DEADLINE[0]:
             break  # unseen names are picked up next run
         seen[url][name] = h
         score = scores.get(i)
@@ -329,7 +345,7 @@ def status():
     if ON("BACKGROUND", "1") and time.time() - st.get("last_run", 0) > EVERY:
         STATE_DIR.mkdir(parents=True, exist_ok=True)
         with open(STATE_DIR / "watch.log", "a") as log:  # detached, so the caller never waits
-            subprocess.Popen([sys.executable, str(Path(__file__).resolve()), "run"], start_new_session=True,
+            subprocess.Popen([sys.executable, str(Path(__file__).resolve()), "run", "--if-due"], start_new_session=True,
                              stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT)
     return 0
 
@@ -354,7 +370,7 @@ def main(argv):
     if not fn:
         print(__doc__)
         return 2
-    return fn()
+    return run(if_due="--if-due" in argv[2:]) if fn is run else fn()
 
 
 if __name__ == "__main__":

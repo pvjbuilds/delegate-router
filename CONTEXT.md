@@ -38,8 +38,10 @@ another model the user already pays for, picked from `skills/delegate/ROUTING.md
   figures are copied from them.
 - 2026-09-30: The installer prints the Codex `network_access` and SessionStart hook snippets
   instead of editing user settings.
-- Assumption, unverified live: `agy -p --model <slug> --sandbox` accepts the slug from
-  `agy models`; `claude -p --setting-sources ""` works for the probe.
+- Verified live 2026-09-30: `agy -p --model <slug> --sandbox` and the `claude -p
+  --setting-sources ""` probe both answer `ok`; a Codex host (workspace-write + network_access)
+  runs `claude -p --agent opus-implementer` and the file lands. Without network, claude says
+  "Not logged in". User hooks that write outside the repo can block it inside the sandbox.
 
 ## Current state
 

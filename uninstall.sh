@@ -3,13 +3,12 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")" && pwd -P)"
-for path in "$HOME/.claude/skills/delegate" "$HOME/.agents/skills/delegate" \
-            "$HOME/.claude/agents/opus-implementer.md"; do
+for pair in "skills/delegate:$HOME/.claude/skills/delegate" "skills/delegate:$HOME/.agents/skills/delegate" \
+            "agents/opus-implementer.md:$HOME/.claude/agents/opus-implementer.md"; do
+  target="$REPO/${pair%%:*}" path="${pair#*:}"
   if [ -L "$path" ]; then
-    case "$(readlink "$path")" in
-      "$REPO"/*) rm "$path"; echo "removed $path" ;;
-      *) echo "left    $path (not ours)" ;;
-    esac
+    if [ "$(readlink "$path")" = "$target" ]; then rm "$path"; echo "removed $path"
+    else echo "left    $path (not ours)"; fi
   fi
 done
 if [ "${1:-}" = "--purge" ]; then

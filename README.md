@@ -14,7 +14,8 @@ quota and context.
 
 - **Routing by task, not by habit.** [ROUTING.md](skills/delegate/ROUTING.md) maps each kind of
   task to an ordered list of models, chosen from independent benchmarks and cost per task.
-  It skips any CLI you don't have and never routes back to the host's own model.
+  It skips any CLI you don't have and never routes back to the host's own model, except an
+  Opus subagent under an Opus host, which keeps the main context clean.
 - **A judge before every handoff.** Four gates (bulk, decided, verifiable, contained) and a
   never-delegate list (debugging, architecture, security code, anything under ~40 lines).
 - **The host always verifies.** A delegate's "done" isn't evidence: the host runs the check and
@@ -50,10 +51,10 @@ default; `--yes` takes every default. Re-running it keeps your earlier answers.
 
 | Question | Default | What it does |
 |---|---|---|
-| Install for Claude Code? | yes, if found | Links `~/.claude/skills/delegate` |
-| Install for Codex CLI? | yes, if found | Links `~/.agents/skills/delegate` |
+| Install for Claude Code? | yes, if found | Links `~/.claude/skills/delegate`; no removes that link |
+| Install for Codex CLI? | yes, if found | Links `~/.agents/skills/delegate`; no removes that link |
 | Background checks for new models? | yes | At most every 12 h, only when the skill runs. No daemon, no cron. |
-| Update the CLI and probe a new model? | no | Updates through the channel the CLI came from (Homebrew cask, npm, or its own updater), then sends a one-word, tools-off, read-only probe |
+| Update the CLI and probe a new model? | no | Updates through the channel the CLI came from (Homebrew cask, npm, or its own updater), then sends a one-word, read-only probe |
 | Turn on Jev? | no | See [Jev](#jev-optional) |
 
 If `claude` is installed, the installer also links the `opus-implementer` agent into
@@ -112,10 +113,12 @@ That brings a newer routing map. Between releases, `model_watch.py` tells you wh
 python3 ~/.delegate-router/skills/delegate/scripts/model_watch.py status
 ```
 
-- `status` makes no network calls. It lists your delegate CLIs, any new release it found, and
-  any model your CLIs list that ROUTING.md doesn't cover yet.
+- `status` makes no network calls itself. It lists your delegate CLIs, any new release it
+  found, and any model your CLIs list that ROUTING.md doesn't cover yet. With background checks
+  on, it also starts `run --if-due` in the background, which goes online at most every 12 h.
 - `run` does the checking: model catalogs (`codex debug models`, `agy models`, Anthropic's
-  models page) and five vendor release-note pages. It's capped at 10 names and 15 minutes.
+  models page) and five vendor release-note pages. It's capped at 10 names, and every step,
+  CLI update and probe included, stops at 15 minutes.
 - `ack` marks everything current as reviewed.
 
 State lives in `~/.local/state/delegate-router/`, settings in
@@ -144,12 +147,18 @@ The key is never read from a file in this repo, never written to config and neve
 
 ## Safety
 
-- Delegates run in their CLI's sandbox: `workspace-write` to implement, `read-only` to review.
-  Never full access, never a `--dangerously-bypass-*` flag.
+- **Codex** delegates run in Codex's sandbox: `workspace-write` to implement, `read-only` to
+  review. Never full access, never a `--dangerously-bypass-*` flag.
+- **Gemini** runs through `agy` in plan mode with `--sandbox`, from an empty folder holding only
+  the files you copied in.
+- **Claude Opus** as an implementer runs with the Claude Code host's own permissions (turn on
+  Claude Code's `/sandbox` for OS-level confinement), or inside Codex's sandbox when Codex is
+  the host. As a reviewer it runs `--restricted` with only Read, Grep and Glob.
 - Every Codex packet says "do not remove or weaken any existing test".
 - Security, auth and money code is never typed by a delegate. A strong model may review it,
   read-only.
-- New-model probes run in an empty temp folder with tools off, and pass only on an exact `ok`.
+- New-model probes send one fixed prompt from an empty temp folder, with your CLI config,
+  rules and integrations turned off where the CLI allows it, and pass only on an exact `ok`.
 - Model names read from web pages are validated before they're printed or passed to a CLI.
 
 ## Uninstall

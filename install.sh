@@ -32,19 +32,17 @@ ask() {
 # prev KEY default -> the value from an earlier install, else the default
 prev() {
   local v=""
-  [ -f "$CONF" ] && v="$(sed -n "s/^$1=['\"]\{0,1\}\([01]\)['\"]\{0,1\}\$/\1/p" "$CONF" | tail -n 1)"
+  [ -f "$CONF" ] && v="$(sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*['\"]\{0,1\}\([01]\)['\"]\{0,1\}[[:space:]]*\$/\1/p" "$CONF" | tail -n 1)"
   printf '%s' "${v:-$2}"
 }
 yn() { [ "$1" = 1 ] && printf y || printf n; }
 
-# link TARGET PATH: create or refresh our symlink; never touch anything that isn't ours
+# link TARGET PATH: create our symlink; never touch anything that isn't exactly ours
 link() {
   local target="$1" path="$2"
   if [ -L "$path" ]; then
-    case "$(readlink "$path")" in
-      "$REPO"/*) ln -sfn "$target" "$path"; say "  ok     $path" ;;
-      *) say "  SKIP   $path is a symlink to $(readlink "$path"); remove it yourself to use this one" ;;
-    esac
+    if [ "$(readlink "$path")" = "$target" ]; then say "  ok     $path"
+    else say "  SKIP   $path is a symlink to $(readlink "$path"); remove it yourself to use this one"; fi
   elif [ -e "$path" ]; then
     say "  SKIP   $path already exists and isn't ours; move it aside and re-run"
   else
@@ -53,6 +51,7 @@ link() {
     say "  ok     $path"
   fi
 }
+unlink_ours() { if [ -L "$2" ] && [ "$(readlink "$2")" = "$1" ]; then rm "$2"; say "  removed $2"; fi; }
 
 say "delegate-router setup"
 say
@@ -65,18 +64,17 @@ say "Found on PATH:${found:- nothing}"
 have claude || have codex || have agy || say "No delegate CLI found yet (claude, codex, agy). The skill needs at least two agents to route between."
 say
 
-# 2. Hosts
-said_codex=0
+# 2. Hosts. A host that isn't on this machine keeps its earlier answer.
+cc="$(prev INSTALL_CLAUDE_CODE 1)"; cx="$(prev INSTALL_CODEX 1)"; said_codex=0
 if have claude || [ -d "$HOME/.claude" ]; then
-  if ask "Install the skill for Claude Code (~/.claude/skills)?" y; then
-    link "$SKILL" "$HOME/.claude/skills/delegate"
-  fi
+  if ask "Install the skill for Claude Code (~/.claude/skills)?" "$(yn "$cc")"; then
+    cc=1; link "$SKILL" "$HOME/.claude/skills/delegate"
+  else cc=0; unlink_ours "$SKILL" "$HOME/.claude/skills/delegate"; fi
 fi
 if have codex || [ -d "$HOME/.codex" ]; then
-  if ask "Install the skill for Codex CLI (~/.agents/skills)?" y; then
-    link "$SKILL" "$HOME/.agents/skills/delegate"
-    said_codex=1
-  fi
+  if ask "Install the skill for Codex CLI (~/.agents/skills)?" "$(yn "$cx")"; then
+    cx=1; said_codex=1; link "$SKILL" "$HOME/.agents/skills/delegate"
+  else cx=0; unlink_ours "$SKILL" "$HOME/.agents/skills/delegate"; fi
 fi
 if have claude; then
   say "Claude Opus delegate: installing the opus-implementer agent (used by both hosts)."
@@ -111,12 +109,15 @@ mkdir -p "$CONF_DIR"
 tmp="$(mktemp "$CONF_DIR/.config.XXXXXX")"
 {
   say "# Written by install.sh; re-run it to change these. See config.example.env."
+  say "INSTALL_CLAUDE_CODE=$cc"
+  say "INSTALL_CODEX=$cx"
   say "BACKGROUND=$bg"
   say "AUTO_UPDATE_CLI=$up"
   say "JEV=$jev"
-  [ -f "$CONF" ] && grep -Ev '^(#|BACKGROUND=|AUTO_UPDATE_CLI=|JEV=)' "$CONF" || true
+  [ -f "$CONF" ] && grep -Ev '^[[:space:]]*(#|(INSTALL_CLAUDE_CODE|INSTALL_CODEX|BACKGROUND|AUTO_UPDATE_CLI|JEV)[[:space:]]*=)' "$CONF" || true
 } > "$tmp"
-mv "$tmp" "$CONF"
+if [ -L "$CONF" ]; then cat "$tmp" > "$CONF" && rm -f "$tmp"  # a dotfiles symlink stays a symlink
+else mv "$tmp" "$CONF"; fi
 say
 say "Saved $CONF"
 

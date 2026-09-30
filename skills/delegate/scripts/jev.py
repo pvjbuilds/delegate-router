@@ -149,14 +149,15 @@ def _candidates(paths, stdin):
 
 def _readable(p, root):
     """File text if it is safe to send, else None. Best-effort pattern match, not a guarantee."""
+    if SECRET_NAME.search(p.name):
+        return None
     try:
         real = p.resolve(strict=True)
         real.relative_to(root)  # rejects symlink escapes and paths outside cwd
+        with open(real, "rb") as f:
+            raw = f.read(CAP * 4)  # never the whole file: it may be a multi-GB asset
     except (OSError, ValueError):
         return None
-    if SECRET_NAME.search(p.name):
-        return None
-    raw = real.read_bytes()[:CAP * 4]
     if b"\0" in raw[:8192]:
         return None
     text = raw.decode("utf-8", "replace")

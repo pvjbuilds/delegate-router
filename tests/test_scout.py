@@ -109,6 +109,13 @@ def test_big_files_are_capped_and_marked_cut():
     assert "big.py  (cut)" in out, out
 
 
+def test_an_unreadable_file_is_skipped_and_the_scan_goes_on():
+    root = repo({"a.py": "RELEVANT", "locked.py": "RELEVANT"})
+    (root / "locked.py").chmod(0)
+    code, out = run("task", ".")
+    assert code == 0 and len(bodies) == 1 and "locked.py" in out and "1 skipped" in out, out
+
+
 def test_every_scored_file_is_listed_by_default():
     repo({f"f{i:02}.py": "x" for i in range(20)})
     _, out = run("task", ".")

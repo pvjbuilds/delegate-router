@@ -36,17 +36,40 @@ grep -qx BACKGROUND=0 "$CONF" && grep -qx JEV=1 "$CONF" || fail "re-run lost ear
 [ "$(grep -c '^JEV=' "$CONF")" = 1 ] || fail "duplicate keys"
 ok rerun_keeps_earlier_answers
 
+printf 'y\nn\n' | bash "$REPO/install.sh" > /dev/null  # keep Claude Code, decline Codex
+[ ! -e "$HOME/.agents/skills/delegate" ] || fail "declined Codex is still linked"
+bash "$REPO/install.sh" --yes < /dev/null > /dev/null
+[ ! -e "$HOME/.agents/skills/delegate" ] || fail "--yes re-linked a declined host"
+grep -qx INSTALL_CODEX=0 "$CONF" || fail "host answer not saved: $(cat "$CONF")"
+printf 'y\ny\n' | bash "$REPO/install.sh" > /dev/null
+ok host_answers_are_remembered
+
+printf 'BACKGROUND = 0\n' >> "$CONF"  # the watcher accepts spaces around =
+printf 'y\ny\ny\n' | bash "$REPO/install.sh" > /dev/null
+[ "$(grep -c BACKGROUND "$CONF")" = 1 ] && grep -qx BACKGROUND=1 "$CONF" || fail "spaced key survived: $(cat "$CONF")"
+mv "$CONF" "$T/dotfiles.env" && ln -s "$T/dotfiles.env" "$CONF"
+bash "$REPO/install.sh" --yes < /dev/null > /dev/null
+[ -L "$CONF" ] && grep -qx BACKGROUND=1 "$T/dotfiles.env" || fail "config symlink replaced"
+rm "$CONF" && mv "$T/dotfiles.env" "$CONF"
+ok config_is_rewritten_in_place_whatever_its_spelling
+
 bash "$REPO/uninstall.sh" > /dev/null
 rm -f "$HOME/.claude/agents/opus-implementer.md"
 mkdir -p "$HOME/.agents/skills/delegate"
 echo mine > "$HOME/.agents/skills/delegate/SKILL.md"
 ln -s /elsewhere "$HOME/.claude/agents/opus-implementer.md"
+ln -s "$REPO/../elsewhere" "$HOME/.claude/skills/delegate"  # inside-looking, but not our target
 out="$(printf 'y\ny\n' | bash "$REPO/install.sh")"
 [ "$(cat "$HOME/.agents/skills/delegate/SKILL.md")" = mine ] || fail "clobbered a real folder"
 [ "$(readlink "$HOME/.claude/agents/opus-implementer.md")" = /elsewhere ] || fail "clobbered a foreign symlink"
-[ "$(echo "$out" | grep -c SKIP)" = 2 ] || fail "skips not reported: $out"
+[ "$(readlink "$HOME/.claude/skills/delegate")" = "$REPO/../elsewhere" ] || fail "replaced a link that only looked like ours"
+[ "$(echo "$out" | grep -c SKIP)" = 3 ] || fail "skips not reported: $out"
 ok never_clobbers_what_isnt_ours
 
+bash "$REPO/uninstall.sh" > /dev/null
+[ -L "$HOME/.claude/skills/delegate" ] || fail "uninstall removed a link that only looked like ours"
+rm "$HOME/.claude/skills/delegate"
+printf 'y\ny\n' | bash "$REPO/install.sh" > /dev/null
 out="$(bash "$REPO/uninstall.sh")"
 [ ! -e "$HOME/.claude/skills/delegate" ] || fail "claude link left behind"
 [ -d "$HOME/.agents/skills/delegate" ] && [ -L "$HOME/.claude/agents/opus-implementer.md" ] || fail "uninstall removed a foreign path"
