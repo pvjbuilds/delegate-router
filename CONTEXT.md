@@ -45,13 +45,10 @@ another model the user already pays for, picked from `skills/delegate/ROUTING.md
 
 ## Current state
 
-2026-09-30: v1.0.0 in preparation, private. Astra medium review, three rounds (the maximum):
-round 1, 13 findings; round 2, 4 new plus partial fixes; round 3, 4 more. All fixed, round 3's
-in the commit after `7b2e9c1` (installer skips a config it didn't write; each fetch has a
-total deadline and a timed-out updater's children are killed; Codex delegates and probes also
-run `--ignore-rules -c features.apps=false`; stricter probe stubs). Round 3's fixes have not
-been reviewed by another model.
-Documented limits: a Claude Code host's subagent has the host's permissions; `agy` has no
-integrations switch; Codex plugins and admin config still apply; `*_BIN` is watcher-only;
-`status` may start the 12 h check.
-Not yet done: tag, public flip (needs the maintainer's go on the SHA).
+2026-09-30: v1.0.0 released, public. Astra medium review, three rounds (the maximum), all
+findings fixed; round 3's fixes were not re-reviewed by another model. The maintainer kept
+the history and accepted the documented limits: a Claude Code host's subagent has the host's
+permissions; `agy` has no integrations switch; Codex plugins and admin config still apply;
+`*_BIN` is watcher-only; `status` may start the 12 h check.
+Candidates for v1.1: keep custom Codex providers in delegate calls (`--ignore-user-config`
+drops them today), a generic "any CLI" delegate row, other main agents.

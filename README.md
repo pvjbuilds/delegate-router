@@ -28,10 +28,11 @@ Interactive diagram: [docs/workflow.html](docs/workflow.html) (open it locally).
 ## Requirements
 
 - macOS or Linux, `git`, `python3` 3.9+.
-- **Two or more** of: [Claude Code](https://code.claude.com/docs) (`claude`),
-  [Codex CLI](https://github.com/openai/codex) (`codex`),
-  [Antigravity CLI](https://antigravity.google) (`agy`). Each needs its own subscription or API
-  access; delegate-router adds no accounts and no API keys.
+- **Your main agent is [Claude Code](https://code.claude.com/docs) (`claude`) or
+  [Codex CLI](https://github.com/openai/codex) (`codex`)**, plus at least one more of Codex,
+  Gemini through the [Antigravity CLI](https://antigravity.google) (`agy`), or Claude. Other
+  main agents and other providers (DeepSeek, local models) aren't supported yet. Each CLI
+  needs its own subscription or API access; delegate-router adds no accounts and no API keys.
 - Optional: [uv](https://docs.astral.sh/uv/) and a TypeSafe key, only for Jev.
 
 ## Install
