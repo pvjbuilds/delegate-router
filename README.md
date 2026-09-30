@@ -6,7 +6,8 @@
 # delegate-router: multi-model task delegation for Claude Code and Codex CLI
 
 **One agent thinks, another types.** delegate-router is an agent skill (SKILL.md, the Agent
-Skills format) for **Claude Code** and **OpenAI Codex CLI**. It hands bulky, already-decided work (boilerplate, scaffolding, test stubs,
+Skills format) for **Claude Code** and **OpenAI Codex CLI** that works as an LLM router for
+coding work. It hands bulky, already-decided work (boilerplate, scaffolding, test stubs,
 mechanical edits across many files, reading media and long documents) to another model you
 already pay for: **Codex** (GPT models), **Gemini** through the Antigravity `agy` CLI, or a
 **Claude Opus** subagent. The host keeps the design and the verification, and saves its own
@@ -202,14 +203,14 @@ turn them on.
 
 ## Keywords
 
-Claude Code skill · Claude Code skills · Codex CLI skill · Codex skills · Agent Skills ·
-SKILL.md · agentic coding · AI coding agent · AI coding assistant · multi-agent · multi-model ·
-multi-model routing · LLM router · model router · model routing · subagent · Claude Code
-subagent · task delegation · AI code delegation · Claude Opus 5.5 · GPT-6.1 Sol · GPT-6 Luna ·
-GPT-6 Astra · Gemini 3.8 Flash · Antigravity CLI · agy · OpenAI Codex · Anthropic Claude ·
-Google Gemini · save tokens · token optimization · reduce AI coding cost · subscription quota ·
-cost per task · code review council · cross-model code review · second-opinion review ·
-model release watcher · new model alerts · sandboxed agents · TypeSafe Jev
+task delegation · delegate coding tasks · AI code delegation · LLM router · LLM routing · model
+router · model routing · multi-model routing · multi-model · multi-LLM · cross-model code review ·
+Claude Code skill · Claude Code skills · Codex CLI skill · Codex skills · Agent Skills · SKILL.md ·
+Claude Code subagent · subagent · coding agent · AI coding agent · agentic coding · multi-agent ·
+save tokens · token optimization · reduce AI coding cost · cost per task · subscription quota ·
+model release watcher · new model alerts · OpenAI Codex · Google Gemini · Anthropic Claude ·
+Antigravity CLI · agy · Claude Opus 5.5 · GPT-6.1 Sol · GPT-6 Luna · GPT-6 Astra ·
+Gemini 3.8 Flash · TypeSafe Jev
 
 ## License
 
