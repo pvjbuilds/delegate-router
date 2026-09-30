@@ -37,15 +37,18 @@ CODEX = stub(cask / "codex", f"""echo codex "$@" >> {calls}
 if [ "$1" = debug ]; then
   if grep -q brew {calls}; then echo '{{"models":[{{"slug":"gpt-6.2-sol","visibility":"list"}},{{"slug":"gpt-6-sol","visibility":"list"}}]}}'
   else echo '{{"models":[{{"slug":"gpt-6-sol","visibility":"list"}},{{"slug":"gpt-hidden","visibility":"hide"}}]}}'; fi
-else while [ "$1" != -o ]; do shift; done; echo "${{PROBE_REPLY:-ok}}" > "$2"; fi
+else case "$*" in *"-s read-only"*--ignore-user-config*--ignore-rules*) r="${{PROBE_REPLY:-ok}}";; *) r=unsafe;; esac
+  while [ "$1" != -o ]; do shift; done; echo "$r" > "$2"; fi
 """)
 stub(bindir / "brew", f'echo brew "$@" >> {calls}\nsleep "${{BREW_SLEEP:-0}}"\n')
 AGY = stub(bindir / "agy", f"""echo agy "$@" >> {calls}
-if [ "$1" = -p ]; then echo ok; exit; fi
+if [ "$1" = -p ]; then case "$*" in *"--sandbox --mode plan"*) echo ok;; *) echo unsafe;; esac; exit; fi
 printf 'gemini-3.8-flash-high\\tGemini 3.8 Flash (High)\\n'
 printf 'rm -rf ~;echo\\tEvil\\n'
 """)
-CLAUDE = stub(bindir / "claude", f'echo claude "$@" >> {calls}\necho ok\n')
+CLAUDE = stub(bindir / "claude", f"""echo claude "$@" >> {calls}
+case "$*" in *"--tools  --strict-mcp-config --setting-sources "*) echo ok;; *) echo unsafe;; esac
+""")  # a probe passes only with the isolation flags; tools-off shows as a double space
 JEV = stub(bindir / "jev", f"""echo jev >> {calls}
 i=0; while read -r l; do echo "{{\\"i\\": $i, \\"new_model\\": ${{JEV_SCORE:-0.9}}}}"; i=$((i+1)); done
 """)
@@ -216,6 +219,23 @@ def test_run_stops_at_its_budget():
     watch("run", BREW_SLEEP="5", DELEGATE_ROUTER_BUDGET="1", **ON)
     assert time.time() - t < 4, "the update ran past the budget"
     assert "exec -m" not in calls.read_text()  # no probe started after the budget ran out
+
+
+def test_nothing_goes_online_after_the_deadline():
+    calls.unlink(missing_ok=True)
+    os.environ.update({k: BASE[k] for k in ("DELEGATE_ROUTER_STATE", "DELEGATE_ROUTER_CONFIG", "DELEGATE_ROUTER_JEV")})
+    sys.path.insert(0, str(SCRIPT.parent))
+    import model_watch as mw
+    import urllib.request
+    opened = []
+    real, urllib.request.urlopen = urllib.request.urlopen, lambda *a, **k: opened.append(a)
+    try:
+        mw.DEADLINE[0] = time.time() - 1
+        assert mw.claude_catalog() is None and mw.ask_jev([{"text": "x"}]) is None
+    finally:
+        urllib.request.urlopen, mw.DEADLINE[0] = real, float("inf")
+    assert not opened, "a page was fetched after the deadline"
+    assert "jev" not in (calls.read_text() if calls.exists() else ""), "Jev was asked after the deadline"
 
 
 def test_config_file_is_read_and_env_wins():

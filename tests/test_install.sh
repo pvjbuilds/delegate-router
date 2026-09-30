@@ -47,11 +47,13 @@ ok host_answers_are_remembered
 printf 'BACKGROUND = 0\n' >> "$CONF"  # the watcher accepts spaces around =
 printf 'y\ny\ny\n' | bash "$REPO/install.sh" > /dev/null
 [ "$(grep -c BACKGROUND "$CONF")" = 1 ] && grep -qx BACKGROUND=1 "$CONF" || fail "spaced key survived: $(cat "$CONF")"
-mv "$CONF" "$T/dotfiles.env" && ln -s "$T/dotfiles.env" "$CONF"
+rm "$CONF" && printf '# mine\nBACKGROUND=0\n' > "$T/dotfiles.env" && ln -s "$T/dotfiles.env" "$CONF"
+out="$(bash "$REPO/install.sh" --yes < /dev/null)"
+[ -L "$CONF" ] && [ "$(cat "$T/dotfiles.env")" = "$(printf '# mine\nBACKGROUND=0')" ] || fail "config symlink target was modified"
+echo "$out" | grep -q "SKIP.*$CONF" || fail "no SKIP for a symlinked config: $out"
+rm "$CONF"
 bash "$REPO/install.sh" --yes < /dev/null > /dev/null
-[ -L "$CONF" ] && grep -qx BACKGROUND=1 "$T/dotfiles.env" || fail "config symlink replaced"
-rm "$CONF" && mv "$T/dotfiles.env" "$CONF"
-ok config_is_rewritten_in_place_whatever_its_spelling
+ok config_spelling_is_normalised_and_a_symlinked_config_is_left_alone
 
 bash "$REPO/uninstall.sh" > /dev/null
 rm -f "$HOME/.claude/agents/opus-implementer.md"

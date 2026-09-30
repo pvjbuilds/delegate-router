@@ -134,8 +134,11 @@ def call(argv, timeout, cwd=None):
 
 
 def fetch(url):
+    t = left(15)
+    if t <= 0:
+        raise TimeoutError("past the run's deadline")
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})  # some pages 403 Python's UA
-    with urllib.request.urlopen(req, timeout=15) as r:
+    with urllib.request.urlopen(req, timeout=t) as r:  # ponytail: per-socket-op timeout, not a total cap
         return r.read(MAX_FETCH).decode("utf-8", "replace")
 
 
@@ -220,11 +223,13 @@ def probe(name, catalog):
 
 def ask_jev(contexts):
     """Scores per context, or None if Jev failed (the names are then retried next run)."""
+    if left(180) <= 0:
+        return None
     cmd = E("DELEGATE_ROUTER_JEV")
     argv = [cmd] if cmd else [shutil.which("uv") or "uv", "run", "--quiet", str(SKILL_DIR / "scripts" / "jev.py")]
     try:
         r = subprocess.run(argv + ["ask", QUESTION, "--lines"], input="".join(json.dumps(c) + "\n" for c in contexts),
-                           capture_output=True, text=True, timeout=max(left(180), 0.1))
+                           capture_output=True, text=True, timeout=left(180))
         scores = {row["i"]: float(row["new_model"]) for row in map(json.loads, r.stdout.splitlines())}
     except Exception:
         return None

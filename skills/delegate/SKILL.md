@@ -86,12 +86,15 @@ full output into the host's context**: read its short summary and the diff.
 ### Codex (`codex exec`): agent mode, edits real files
 
 ```bash
-codex exec -m <model> -c model_reasoning_effort=<effort> \
+codex exec -m <model> -c model_reasoning_effort=<effort> --ignore-user-config \
   -s workspace-write -C <repo> -o <tmp>/delegate-out.md \
   "$(cat <tmp>/packet.md)" < /dev/null
 ```
 
 - **Always pass `-m` and the effort.** Codex's own default model may not be the one you want.
+- **`--ignore-user-config`** keeps your MCP servers, apps and custom settings out of the
+  delegate: the sandbox confines shell commands, not integrations, and a packet can carry
+  injected instructions. Login still works; it isn't in that file.
 - **`-o`** writes only the final message to a file. **`< /dev/null`** prevents a stdin hang.
 - **Sandbox:** `workspace-write` to implement, `read-only` to review. Never full access, never
   a `--dangerously-bypass-*` flag.
@@ -113,9 +116,10 @@ mkdir -p <tmp>/handoff && cd <tmp>/handoff && \
   prompt, delete the copies afterwards. File content goes to Google.
 - **Code output:** end the spec with "Output ONLY code, no markdown fences, no commentary".
   Strip fences anyway, then write the result to the target file with a short script.
-- `agy -p` is an agent with tools. `--mode plan` stops it editing, `--sandbox` restricts its
-  terminal, and the empty handoff folder limits what it can read. Use its text output only;
-  it doesn't generate images.
+- `agy -p` is an agent with tools. `--mode plan` stops it editing and `--sandbox` restricts its
+  terminal. The handoff folder only decides what it is pointed at: **it is not a read
+  boundary**, and `agy` has no switch to turn off your integrations. Send it only packets you
+  wrote, never untrusted text. Use its text output only; it doesn't generate images.
 
 ### Claude: the `opus-implementer` subagent
 
@@ -133,9 +137,10 @@ mkdir -p <tmp>/handoff && cd <tmp>/handoff && \
     "$(cat <tmp>/packet.md)" < /dev/null > <tmp>/claude-out.md
   ```
 
-  Codex's sandbox blocks network by default, so this call needs your approval, or
-  `network_access = true` in `~/.codex/config.toml` (see the README). Without network,
-  `claude` reports "Not logged in".
+  Codex's sandbox blocks network by default. **Don't approve the escalation**: an approved
+  command runs outside the sandbox. Set `network_access = true` in `~/.codex/config.toml`
+  instead (see the README), which keeps the sandbox. Without network, `claude` reports
+  "Not logged in".
 - A user hook that writes outside the repo (a cache, a log) fails inside Codex's sandbox and
   can block the prompt while `claude` still exits 0. Check `claude-out.md`, not the exit code.
   If a hook is the cause, add `--settings '{"disableAllHooks":true}'` for this call only.

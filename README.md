@@ -64,7 +64,8 @@ It never overwrites a file or folder that isn't its own, and never edits your Cl
 Codex settings. It prints two optional snippets instead:
 
 - **Codex as host.** Codex's sandbox blocks network by default, so calling the `claude` CLI
-  from inside Codex asks for approval each time. To allow it, add to `~/.codex/config.toml`:
+  from inside Codex asks for approval. Don't approve it: an approved command runs outside the
+  sandbox. Instead add to `~/.codex/config.toml`, which keeps the sandbox on:
 
   ```toml
   [sandbox_workspace_write]
@@ -148,9 +149,11 @@ The key is never read from a file in this repo, never written to config and neve
 ## Safety
 
 - **Codex** delegates run in Codex's sandbox: `workspace-write` to implement, `read-only` to
-  review. Never full access, never a `--dangerously-bypass-*` flag.
-- **Gemini** runs through `agy` in plan mode with `--sandbox`, from an empty folder holding only
-  the files you copied in.
+  review. Never full access, never a `--dangerously-bypass-*` flag. `--ignore-user-config`
+  keeps your MCP servers and apps out of reach.
+- **Gemini** runs through `agy` in plan mode with `--sandbox`. It is still an agent: the
+  handoff folder isn't a read boundary and your integrations stay on, so send it only packets
+  you wrote.
 - **Claude Opus** as an implementer runs with the Claude Code host's own permissions (turn on
   Claude Code's `/sandbox` for OS-level confinement), or inside Codex's sandbox when Codex is
   the host. As a reviewer it runs `--restricted` with only Read, Grep and Glob.

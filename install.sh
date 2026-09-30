@@ -104,8 +104,14 @@ if ask "Turn on Jev?" "$(yn "$(prev JEV 0)")"; then
   fi
 fi
 
-# 4. Config: keep any lines we don't own (e.g. CODEX_BIN)
+# 4. Config: keep any lines we don't own (e.g. CODEX_BIN). A symlinked config belongs to
+# someone else (dotfiles): leave it and its target alone.
 mkdir -p "$CONF_DIR"
+if [ -L "$CONF" ]; then
+  say
+  say "  SKIP   $CONF is a symlink; not writing through it. Set these in it yourself:"
+  say "         INSTALL_CLAUDE_CODE=$cc INSTALL_CODEX=$cx BACKGROUND=$bg AUTO_UPDATE_CLI=$up JEV=$jev"
+else
 tmp="$(mktemp "$CONF_DIR/.config.XXXXXX")"
 {
   say "# Written by install.sh; re-run it to change these. See config.example.env."
@@ -116,16 +122,16 @@ tmp="$(mktemp "$CONF_DIR/.config.XXXXXX")"
   say "JEV=$jev"
   [ -f "$CONF" ] && grep -Ev '^[[:space:]]*(#|(INSTALL_CLAUDE_CODE|INSTALL_CODEX|BACKGROUND|AUTO_UPDATE_CLI|JEV)[[:space:]]*=)' "$CONF" || true
 } > "$tmp"
-if [ -L "$CONF" ]; then cat "$tmp" > "$CONF" && rm -f "$tmp"  # a dotfiles symlink stays a symlink
-else mv "$tmp" "$CONF"; fi
+mv "$tmp" "$CONF"
 say
 say "Saved $CONF"
+fi
 
 # 5. Optional snippets
 if [ "$said_codex" = 1 ] && have claude; then
   say
-  say "Codex host: its sandbox blocks network by default, so the Claude delegate call will ask"
-  say "for approval each time. To allow it, add this to ~/.codex/config.toml:"
+  say "Codex host: its sandbox blocks network, so the Claude delegate call asks for approval."
+  say "Don't approve it (that runs it outside the sandbox). Add this to ~/.codex/config.toml:"
   say
   say "  [sandbox_workspace_write]"
   say "  network_access = true"

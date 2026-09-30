@@ -45,7 +45,10 @@ another model the user already pays for, picked from `skills/delegate/ROUTING.md
 
 ## Current state
 
-2026-09-30: v1.0.0 in preparation; private repo at `2a31251`. Offline suites pass (41). Live
-checks done (see Decisions). Astra medium round 1: 13 findings, all fixed in `2a31251`.
-Not yet done: Astra round 2 on `2a31251` (Codex quota out until 18:54 IST), tag, public flip
-(needs the maintainer's go on the SHA).
+2026-09-30: v1.0.0 in preparation, private. Astra medium round 1: 13 findings, fixed. Round 2:
+6 fixed, 6 partly, 1 not, 4 new; fixed in the commit after `baf8439` (symlinked config left
+alone, fetch and Jev bounded by the deadline, Codex delegates run `--ignore-user-config`,
+Gemini and Codex-host network docs corrected, probe stubs require the isolation flags).
+Left as documented limits: a Claude Code host's subagent has the host's permissions; `agy`
+has no integrations switch; `*_BIN` is watcher-only; `status` may start the 12 h check.
+Not yet done: round 3, tag, public flip (needs the maintainer's go on the SHA).

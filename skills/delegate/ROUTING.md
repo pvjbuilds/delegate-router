@@ -55,7 +55,7 @@ In our own words; the numbers live on the trackers linked at the bottom.
 - **GPT-6 Astra** leads on maths, science, abstract reasoning, very long-context retrieval and
   security work. It is slow and expensive, so it gets hard problems and reviews, not bulk typing.
 - **Gemini 3.8 Flash** is fast and cheap, and strong at video and other media. It is weak at
-  multi-step agent work, so it only runs in completion mode: text in, text out.
+  multi-step agent work, so it runs in plan mode and only its text output is used.
 - **GPT-6 Luna** is very cheap and fast but clearly weaker. Mechanical edits only.
 - **Not routed:** Claude Haiku 4.5 (last in every field), Claude Fable 5.1 (Opus 5.5 scores
   higher and costs less), older GPT and Gemini tiers.
@@ -65,11 +65,13 @@ In our own words; the numbers live on the trackers linked at the bottom.
 - **High effort is the ceiling for a delegate.** xhigh and max buy a few points at 2–3× the
   cost per task.
 - **Reviewers run read-only.** A packet can carry injected instructions; only an implementer
-  gets write access.
+  gets write access. Codex delegates also run with `--ignore-user-config`, so your MCP servers
+  and apps aren't reachable.
 - **Caveats to put in every packet:**
   - Codex models: "Do not remove or weaken any existing test." Some GPT models try
     workarounds when access is denied, and Codex's sandbox has no network by default.
-  - Gemini: reads media, but does not generate images, has no shell and cannot edit files.
+  - Gemini: reads media and returns text. It runs in plan mode, so don't ask it to edit files
+    or run commands, and it doesn't generate images.
 - **Handoff overhead** (writing the spec, reading the report and the diff) is real. Worth it for
   another quota pool or for keeping the host's context clean; not worth it to move work to a
   model that costs more per task.
