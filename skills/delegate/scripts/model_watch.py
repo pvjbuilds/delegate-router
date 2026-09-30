@@ -123,14 +123,25 @@ def left(timeout):
 
 
 def call(argv, timeout, cwd=None):
-    """Never interactive: stdin is /dev/null, so an install prompt fails instead of hanging."""
+    """Never interactive: stdin is /dev/null, so an install prompt fails instead of hanging.
+    Runs in its own process group, so a timeout also kills whatever an updater spawned."""
     if left(timeout) <= 0:
         return None
     try:
-        return subprocess.run(argv, capture_output=True, text=True, stdin=subprocess.DEVNULL,
-                              timeout=left(timeout), cwd=cwd or tempfile.gettempdir())
-    except (OSError, subprocess.SubprocessError):
+        p = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                             stdin=subprocess.DEVNULL, cwd=cwd or tempfile.gettempdir(), start_new_session=True)
+    except OSError:
         return None
+    try:
+        out, err = p.communicate(timeout=left(timeout))
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(p.pid, 9)
+        except OSError:
+            pass
+        p.communicate()
+        return None
+    return subprocess.CompletedProcess(argv, p.returncode, out, err)
 
 
 def fetch(url):
@@ -138,8 +149,14 @@ def fetch(url):
     if t <= 0:
         raise TimeoutError("past the run's deadline")
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})  # some pages 403 Python's UA
-    with urllib.request.urlopen(req, timeout=t) as r:  # ponytail: per-socket-op timeout, not a total cap
-        return r.read(MAX_FETCH).decode("utf-8", "replace")
+    body, end = b"", time.time() + t
+    with urllib.request.urlopen(req, timeout=t) as r:  # the socket timeout covers one read; the loop, the total
+        while len(body) < MAX_FETCH and time.time() < end:
+            chunk = r.read1(min(65536, MAX_FETCH - len(body)))
+            if not chunk:
+                break
+            body += chunk
+    return body.decode("utf-8", "replace")
 
 
 # --- catalogs: what each installed CLI can use right now ---
@@ -190,7 +207,8 @@ def update(cli):
 
 
 def probe(name, catalog):
-    """One fixed prompt from an empty temp dir, user config and integrations off. Passes only on exit 0 + 'ok'."""
+    """One fixed prompt from an empty temp dir, with config, rules and integrations off where the CLI
+    has a switch for it (agy has none). Passes only on exit 0 + 'ok'."""
     cli = provider(name)
     b = binary(cli)
     if not b:
@@ -199,7 +217,8 @@ def probe(name, catalog):
         if cli == "codex":
             out = os.path.join(d, "reply.txt")
             argv = [b, "exec", "-m", name, "-s", "read-only", "--skip-git-repo-check", "--ignore-user-config",
-                    "--ignore-rules", "--ephemeral", "-c", "model_reasoning_effort=low", "-o", out, PROBE]
+                    "--ignore-rules", "--ephemeral", "-c", "features.apps=false", "-c", "model_reasoning_effort=low",
+                    "-o", out, PROBE]
         elif cli == "claude":
             argv = [b, "-p", "--model", name, "--tools", "", "--strict-mcp-config",
                     "--setting-sources", "", "--no-session-persistence", PROBE]

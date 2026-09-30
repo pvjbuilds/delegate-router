@@ -86,15 +86,18 @@ full output into the host's context**: read its short summary and the diff.
 ### Codex (`codex exec`): agent mode, edits real files
 
 ```bash
-codex exec -m <model> -c model_reasoning_effort=<effort> --ignore-user-config \
+codex exec -m <model> -c model_reasoning_effort=<effort> \
+  --ignore-user-config --ignore-rules -c features.apps=false \
   -s workspace-write -C <repo> -o <tmp>/delegate-out.md \
   "$(cat <tmp>/packet.md)" < /dev/null
 ```
 
 - **Always pass `-m` and the effort.** Codex's own default model may not be the one you want.
-- **`--ignore-user-config`** keeps your MCP servers, apps and custom settings out of the
-  delegate: the sandbox confines shell commands, not integrations, and a packet can carry
-  injected instructions. Login still works; it isn't in that file.
+- **Isolation flags.** The sandbox confines shell commands, not integrations, and a packet
+  can carry injected instructions. `--ignore-user-config` skips your `config.toml` (and the
+  MCP servers set there), `--ignore-rules` skips execpolicy rules that could allow a command
+  outside the sandbox, and `features.apps=false` turns off apps, which are on by default.
+  Plugins and admin-managed config can still apply. Login still works; it isn't in that file.
 - **`-o`** writes only the final message to a file. **`< /dev/null`** prevents a stdin hang.
 - **Sandbox:** `workspace-write` to implement, `read-only` to review. Never full access, never
   a `--dangerously-bypass-*` flag.
@@ -129,8 +132,9 @@ mkdir -p <tmp>/handoff && cd <tmp>/handoff && \
   It runs with **the host session's own permissions**, not a separate sandbox: the same
   prompts and rules as if the host did the edit. For OS-level confinement, turn on Claude
   Code's sandbox (`/sandbox`).
-- **Host is Codex:** run it as a CLI from the repo root. It runs inside Codex's
-  `workspace-write` sandbox, so its writes stay in the repo:
+- **Host is Codex:** run it as a CLI from the repo root. If the Codex session is sandboxed
+  (`workspace-write`, not full access), the call runs inside that sandbox and inherits its
+  write limits:
 
   ```bash
   cd <repo> && claude -p --agent opus-implementer --permission-mode acceptEdits \

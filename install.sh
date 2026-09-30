@@ -105,16 +105,17 @@ if ask "Turn on Jev?" "$(yn "$(prev JEV 0)")"; then
 fi
 
 # 4. Config: keep any lines we don't own (e.g. CODEX_BIN). A symlinked config belongs to
-# someone else (dotfiles): leave it and its target alone.
+# someone else (dotfiles), and so does a file without our first line: leave both alone.
+MARK="# Written by install.sh; re-run it to change these. See config.example.env."
 mkdir -p "$CONF_DIR"
-if [ -L "$CONF" ]; then
+if [ -L "$CONF" ] || { [ -e "$CONF" ] && [ "$(head -n 1 "$CONF")" != "$MARK" ]; }; then
   say
-  say "  SKIP   $CONF is a symlink; not writing through it. Set these in it yourself:"
+  say "  SKIP   $CONF wasn't written by this installer; leaving it. Set these in it yourself:"
   say "         INSTALL_CLAUDE_CODE=$cc INSTALL_CODEX=$cx BACKGROUND=$bg AUTO_UPDATE_CLI=$up JEV=$jev"
 else
 tmp="$(mktemp "$CONF_DIR/.config.XXXXXX")"
 {
-  say "# Written by install.sh; re-run it to change these. See config.example.env."
+  say "$MARK"
   say "INSTALL_CLAUDE_CODE=$cc"
   say "INSTALL_CODEX=$cx"
   say "BACKGROUND=$bg"

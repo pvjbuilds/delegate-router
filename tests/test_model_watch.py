@@ -37,7 +37,7 @@ CODEX = stub(cask / "codex", f"""echo codex "$@" >> {calls}
 if [ "$1" = debug ]; then
   if grep -q brew {calls}; then echo '{{"models":[{{"slug":"gpt-6.2-sol","visibility":"list"}},{{"slug":"gpt-6-sol","visibility":"list"}}]}}'
   else echo '{{"models":[{{"slug":"gpt-6-sol","visibility":"list"}},{{"slug":"gpt-hidden","visibility":"hide"}}]}}'; fi
-else case "$*" in *"-s read-only"*--ignore-user-config*--ignore-rules*) r="${{PROBE_REPLY:-ok}}";; *) r=unsafe;; esac
+else case "$*" in *"-s read-only"*--ignore-user-config*--ignore-rules*features.apps=false*) r="${{PROBE_REPLY:-ok}}";; *) r=unsafe;; esac
   while [ "$1" != -o ]; do shift; done; echo "$r" > "$2"; fi
 """)
 stub(bindir / "brew", f'echo brew "$@" >> {calls}\nsleep "${{BREW_SLEEP:-0}}"\n')
@@ -47,8 +47,8 @@ printf 'gemini-3.8-flash-high\\tGemini 3.8 Flash (High)\\n'
 printf 'rm -rf ~;echo\\tEvil\\n'
 """)
 CLAUDE = stub(bindir / "claude", f"""echo claude "$@" >> {calls}
-case "$*" in *"--tools  --strict-mcp-config --setting-sources "*) echo ok;; *) echo unsafe;; esac
-""")  # a probe passes only with the isolation flags; tools-off shows as a double space
+case "$*" in *"--tools  --strict-mcp-config --setting-sources  --no-session-persistence"*) echo ok;; *) echo unsafe;; esac
+""")  # a probe passes only with the isolation flags; an empty value shows as a double space
 JEV = stub(bindir / "jev", f"""echo jev >> {calls}
 i=0; while read -r l; do echo "{{\\"i\\": $i, \\"new_model\\": ${{JEV_SCORE:-0.9}}}}"; i=$((i+1)); done
 """)
@@ -148,7 +148,7 @@ def test_unknown_install_channel_is_never_updated():
     assert "unknown install channel" in watch("status")
 
 
-def test_other_providers_update_themselves_and_probe_with_tools_off():
+def test_other_providers_update_themselves_and_probe_with_isolation_flags():
     fresh()
     page.write_text("<code>claude-opus-5-5</code>")
     announce("<p>claude-opus-6 and gemini-3.8-flash are available to Pro subscribers.</p>")
@@ -236,6 +236,46 @@ def test_nothing_goes_online_after_the_deadline():
         urllib.request.urlopen, mw.DEADLINE[0] = real, float("inf")
     assert not opened, "a page was fetched after the deadline"
     assert "jev" not in (calls.read_text() if calls.exists() else ""), "Jev was asked after the deadline"
+
+
+def test_a_slow_page_is_cut_off_at_the_deadline():
+    import socket
+    import threading
+    sys.path.insert(0, str(SCRIPT.parent))
+    import model_watch as mw
+    srv = socket.socket()
+    srv.bind(("127.0.0.1", 0))
+    srv.listen(1)
+
+    def drip():
+        c = srv.accept()[0]
+        c.sendall(b"HTTP/1.0 200 OK\r\n\r\n")
+        try:
+            for _ in range(100):  # 5 s of one byte every 50 ms
+                c.sendall(b"x")
+                time.sleep(0.05)
+        except OSError:
+            pass
+        c.close()
+    threading.Thread(target=drip, daemon=True).start()
+    mw.DEADLINE[0] = time.time() + 0.3
+    t = time.time()
+    try:
+        mw.fetch("http://127.0.0.1:{}/".format(srv.getsockname()[1]))
+    except Exception:
+        pass
+    finally:
+        mw.DEADLINE[0] = float("inf")
+    assert time.time() - t < 1.5, "a dripping page outlived the deadline"
+
+
+def test_a_timed_out_update_leaves_no_children_behind():
+    fresh()
+    announce("<p>gpt-6.2-sol is available in Codex.</p>")
+    watch("run", BREW_SLEEP="7.25", DELEGATE_ROUTER_BUDGET="1", **ON)
+    time.sleep(0.3)
+    left = subprocess.run(["pgrep", "-f", "sleep 7.25"], capture_output=True, text=True).stdout
+    assert not left.strip(), "the updater's child outlived the run"
 
 
 def test_config_file_is_read_and_env_wins():

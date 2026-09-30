@@ -65,8 +65,8 @@ In our own words; the numbers live on the trackers linked at the bottom.
 - **High effort is the ceiling for a delegate.** xhigh and max buy a few points at 2–3× the
   cost per task.
 - **Reviewers run read-only.** A packet can carry injected instructions; only an implementer
-  gets write access. Codex delegates also run with `--ignore-user-config`, so your MCP servers
-  and apps aren't reachable.
+  gets write access. Codex delegates also skip your config and rules and turn apps off (see
+  SKILL.md for the flags and what they don't cover).
 - **Caveats to put in every packet:**
   - Codex models: "Do not remove or weaken any existing test." Some GPT models try
     workarounds when access is denied, and Codex's sandbox has no network by default.

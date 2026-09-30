@@ -51,9 +51,13 @@ rm "$CONF" && printf '# mine\nBACKGROUND=0\n' > "$T/dotfiles.env" && ln -s "$T/d
 out="$(bash "$REPO/install.sh" --yes < /dev/null)"
 [ -L "$CONF" ] && [ "$(cat "$T/dotfiles.env")" = "$(printf '# mine\nBACKGROUND=0')" ] || fail "config symlink target was modified"
 echo "$out" | grep -q "SKIP.*$CONF" || fail "no SKIP for a symlinked config: $out"
+rm "$CONF" && printf '# hand-written\nBACKGROUND=0\n' > "$CONF"
+out="$(bash "$REPO/install.sh" --yes < /dev/null)"
+[ "$(cat "$CONF")" = "$(printf '# hand-written\nBACKGROUND=0')" ] || fail "a config we didn't write was rewritten"
+echo "$out" | grep -q "SKIP.*$CONF" || fail "no SKIP for a foreign config: $out"
 rm "$CONF"
 bash "$REPO/install.sh" --yes < /dev/null > /dev/null
-ok config_spelling_is_normalised_and_a_symlinked_config_is_left_alone
+ok config_spelling_is_normalised_and_a_config_we_didnt_write_is_left_alone
 
 bash "$REPO/uninstall.sh" > /dev/null
 rm -f "$HOME/.claude/agents/opus-implementer.md"

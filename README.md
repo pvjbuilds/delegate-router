@@ -149,8 +149,9 @@ The key is never read from a file in this repo, never written to config and neve
 ## Safety
 
 - **Codex** delegates run in Codex's sandbox: `workspace-write` to implement, `read-only` to
-  review. Never full access, never a `--dangerously-bypass-*` flag. `--ignore-user-config`
-  keeps your MCP servers and apps out of reach.
+  review. Never full access, never a `--dangerously-bypass-*` flag. They skip your
+  `config.toml` and execpolicy rules and turn apps off; plugins and admin-managed config can
+  still apply.
 - **Gemini** runs through `agy` in plan mode with `--sandbox`. It is still an agent: the
   handoff folder isn't a read boundary and your integrations stay on, so send it only packets
   you wrote.
