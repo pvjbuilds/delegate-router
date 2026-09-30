@@ -3,10 +3,10 @@
   <img alt="Workflow: your task goes to the host agent, which judges it, picks a model from ROUTING.md, writes a spec, hands the packet to a delegate model (Codex, Gemini via agy, or Claude), and verifies the diff. model_watch.py and the optional Jev scout keep the routing and the spec current." src="docs/workflow-light.png">
 </picture>
 
-# delegate-router
+# delegate-router: multi-model task delegation for Claude Code and Codex CLI
 
-**One agent thinks, another types.** delegate-router is an agent skill for **Claude Code** and
-**OpenAI Codex CLI**. It hands bulky, already-decided work (boilerplate, scaffolding, test stubs,
+**One agent thinks, another types.** delegate-router is an agent skill (SKILL.md, the Agent
+Skills format) for **Claude Code** and **OpenAI Codex CLI**. It hands bulky, already-decided work (boilerplate, scaffolding, test stubs,
 mechanical edits across many files, reading media and long documents) to another model you
 already pay for: **Codex** (GPT models), **Gemini** through the Antigravity `agy` CLI, or a
 **Claude Opus** subagent. The host keeps the design and the verification, and saves its own
@@ -202,11 +202,14 @@ turn them on.
 
 ## Keywords
 
-Claude Code skill · Codex CLI skill · Agent Skills · SKILL.md · multi-model routing · LLM
-router · model routing · AI coding agent · subagent · task delegation · Claude Opus 5.5 ·
-GPT-6.1 Sol · GPT-6 Astra · Gemini 3.8 Flash · Antigravity agy · OpenAI Codex · Anthropic
-Claude · Google Gemini · save tokens · quota · cost per task · code review council · cross-model
-review · model release watcher · TypeSafe Jev
+Claude Code skill · Claude Code skills · Codex CLI skill · Codex skills · Agent Skills ·
+SKILL.md · agentic coding · AI coding agent · AI coding assistant · multi-agent · multi-model ·
+multi-model routing · LLM router · model router · model routing · subagent · Claude Code
+subagent · task delegation · AI code delegation · Claude Opus 5.5 · GPT-6.1 Sol · GPT-6 Luna ·
+GPT-6 Astra · Gemini 3.8 Flash · Antigravity CLI · agy · OpenAI Codex · Anthropic Claude ·
+Google Gemini · save tokens · token optimization · reduce AI coding cost · subscription quota ·
+cost per task · code review council · cross-model code review · second-opinion review ·
+model release watcher · new model alerts · sandboxed agents · TypeSafe Jev
 
 ## License
 
