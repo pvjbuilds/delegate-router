@@ -45,7 +45,8 @@ another model the user already pays for, picked from `skills/delegate/ROUTING.md
 
 ## Current state
 
-2026-09-30: v1.0.0 released, public. Astra medium review, three rounds (the maximum), all
+2026-09-30: v1.0.0 released, public; v1.0.1 the same day, README and this file only
+(requirements line, keywords). Astra medium review, three rounds (the maximum), all
 findings fixed; round 3's fixes were not re-reviewed by another model. The maintainer kept
 the history and accepted the documented limits: a Claude Code host's subagent has the host's
 permissions; `agy` has no integrations switch; Codex plugins and admin config still apply;
