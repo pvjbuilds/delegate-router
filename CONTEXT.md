@@ -45,5 +45,7 @@ another model the user already pays for, picked from `skills/delegate/ROUTING.md
 
 ## Current state
 
-2026-09-30: v1.0.0 in preparation. Offline suites pass. Not yet done: live two-host check,
-cross-provider review, first release.
+2026-09-30: v1.0.0 in preparation; private repo at `2a31251`. Offline suites pass (41). Live
+checks done (see Decisions). Astra medium round 1: 13 findings, all fixed in `2a31251`.
+Not yet done: Astra round 2 on `2a31251` (Codex quota out until 18:54 IST), tag, public flip
+(needs the maintainer's go on the SHA).
