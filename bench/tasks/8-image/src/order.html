@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Purchase order PO-4471</title>
+<style>
+* { box-sizing: border-box; }
+body { width: 900px; margin: 0; padding: 32px; background: white; color: #222; font: 15px system-ui, sans-serif; }
+h1 { margin: 0 0 20px; font-size: 26px; }
+h2 { margin: 30px 0 16px; font-size: 22px; }
+table { width: 100%; border-collapse: collapse; }
+th, td { border: 1px solid #bbb; padding: 10px 14px; text-align: left; }
+th { background: #f3f3f3; }
+th:nth-child(n+3), td:nth-child(n+3) { text-align: right; }
+.cancelled td { text-decoration: line-through; color: #888; }
+.note { color: #888; font-size: 12px; margin: 8px 0 0; }
+svg { display: block; font: 15px system-ui, sans-serif; }
+</style>
+<h1>Purchase order PO-4471</h1>
+<table>
+  <thead><tr><th>SKU</th><th>Item</th><th>Qty</th><th>Unit price</th></tr></thead>
+  <tbody>
+    <tr><td>A-102</td><td>Ballpoint pens (box)</td><td>12</td><td>3.40</td></tr>
+    <tr><td>B-220</td><td>A4 paper ream</td><td>7</td><td>5.85</td></tr>
+    <tr class="cancelled"><td>C-019</td><td>Stapler</td><td>2</td><td>11.20</td></tr>
+    <tr><td>D-305</td><td>Sticky notes</td><td>25</td><td>0.95</td></tr>
+    <tr><td>E-410</td><td>Whiteboard marker</td><td>9</td><td>1.75</td></tr>
+    <tr class="cancelled"><td>F-077</td><td>Desk lamp</td><td>1</td><td>24.50</td></tr>
+    <tr><td>G-512</td><td>Binder clips (tub)</td><td>4</td><td>2.65</td></tr>
+    <tr><td>H-640</td><td>Toner cartridge</td><td>2</td><td>38.90</td></tr>
+  </tbody>
+</table>
+<p class="note">Struck-through lines are cancelled.</p>
+<h2>Spend by region (Q3)</h2>
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="260" viewBox="0 0 600 260">
+  <g stroke="#e5e5e5">
+    <line x1="20" y1="30" x2="580" y2="30"/>
+    <line x1="20" y1="80" x2="580" y2="80"/>
+    <line x1="20" y1="130" x2="580" y2="130"/>
+    <line x1="20" y1="180" x2="580" y2="180"/>
+  </g>
+  <g fill="#4a7bd0">
+    <rect x="40" y="90" width="64" height="140"/>
+    <rect x="152" y="135" width="64" height="95"/>
+    <rect x="264" y="20" width="64" height="210"/>
+    <rect x="376" y="170" width="64" height="60"/>
+    <rect x="488" y="55" width="64" height="175"/>
+  </g>
+  <g fill="#222" text-anchor="middle">
+    <text x="72" y="252">North</text>
+    <text x="184" y="252">South</text>
+    <text x="296" y="252">East</text>
+    <text x="408" y="252">West</text>
+    <text x="520" y="252">Central</text>
+  </g>
+</svg>
+</html>

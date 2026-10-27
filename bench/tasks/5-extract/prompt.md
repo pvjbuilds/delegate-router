@@ -1,0 +1,1 @@
+Read `minutes.md` in this folder and write `facts.json` with exactly these keys: renewal_date (YYYY-MM-DD), budget_lakh (number, the approved figure), migration_vendor (string), golive_blocker_owner (string). Use only what the document says.

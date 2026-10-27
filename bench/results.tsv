@@ -1,0 +1,21 @@
+date	cli	model	effort	task	result	seconds	input_tokens	output_tokens
+2026-10-27 14:29	codex	gpt-6.1-sol	high	1-function	PASS	35	99287	795
+2026-10-27 14:30	codex	gpt-6.1-sol	high	2-rename	PASS	40	125679	486
+2026-10-27 14:31	codex	gpt-6.1-sol	high	3-tests	PASS	37	101507	728
+2026-10-27 14:31	codex	gpt-6.1-sol	high	4-convert	PASS	49	138889	589
+2026-10-27 14:32	codex	gpt-6.1-sol	high	5-extract	PASS	22	77495	293
+2026-10-27 14:32	codex	gpt-6.1-terra	medium	1-function	PASS	19	73632	477
+2026-10-27 14:32	codex	gpt-6.1-terra	medium	2-rename	PASS	21	74228	426
+2026-10-27 14:33	codex	gpt-6.1-terra	medium	3-tests	PASS	26	99782	570
+2026-10-27 14:33	codex	gpt-6.1-terra	medium	4-convert	PASS	17	74870	378
+2026-10-27 14:33	codex	gpt-6.1-terra	medium	5-extract	PASS	21	78060	302
+2026-10-27 15:01	codex	gpt-6.1-terra	medium	6-bugfix	PASS	31	136283	1040
+2026-10-27 15:02	codex	gpt-6.1-terra	medium	7-bisect	PASS	50	105639	996
+2026-10-27 15:03	codex	gpt-6.1-terra	medium	8-image	PASS	41	76192	425
+2026-10-27 15:02	codex	gpt-6.1-sol	high	6-bugfix	PASS	40	108731	1432
+2026-10-27 15:03	codex	gpt-6.1-sol	high	7-bisect	PASS	75	210013	2910
+2026-10-27 15:03	codex	gpt-6.1-sol	high	8-image	PASS	24	77092	464
+2026-10-27 15:12	codex	gpt-6.1-terra	medium	9-semver	PASS	42	133231	2642
+2026-10-27 15:13	codex	gpt-6.1-terra	medium	10-migrate	PASS	39	132500	1364
+2026-10-27 15:13	codex	gpt-6.1-sol	high	9-semver	PASS	92	112168	4309
+2026-10-27 15:14	codex	gpt-6.1-sol	high	10-migrate	PASS	53	196707	2033

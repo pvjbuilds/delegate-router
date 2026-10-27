@@ -1,0 +1,1 @@
+Write `test_slug.py` (unittest) for `slug.py` in this folder: at least 5 test methods covering normal text, punctuation, case, max_len truncation and empty input. All tests must pass against the current code. Do not edit slug.py.

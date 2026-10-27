@@ -1,10 +1,13 @@
 # Routing map: which model gets which task
 
-Snapshot: 2026-09-30
+Snapshot: 2026-10-27
 
 The delegate skill reads this file to pick a model. Benchmarks are a prior, not proof: **a
-check run on the actual task beats any benchmark.** Route by neutral benchmarks, don't run
-trial calls to confirm them, and switch only when real output disappoints.
+check run on the actual task beats any benchmark.** Neutral benchmarks pick a new model's
+first route; before it takes that route, the maintainer runs it through the bench (`bench/` in the repo
+root) against the model that holds the route now. History: 2026-09-30 said "don't run trial
+calls to confirm them". 2026-10-27 the maintainer changed it to bench each new model on
+routine tasks.
 
 `git pull` in the repo brings a newer snapshot. `model_watch.py status` says when this file
 is more than 60 days old or when your CLIs list a model it doesn't cover yet.
@@ -30,7 +33,8 @@ If nothing in a row qualifies, the host does the work itself.
 | **Bulk code** from a written spec: new module, boilerplate, test stubs, many-file mechanical edits | 1. GPT-6.1 Sol<br>2. Claude Opus 5.5 | `codex` · `gpt-6.1-sol`<br>`opus-implementer` · `claude-opus-5-5` | high<br>medium |
 | **Must be right**: correctness matters more than quota, terminal-heavy agent work, or a spec the first pick already failed | 1. Claude Opus 5.5<br>2. GPT-6.1 Sol | `opus-implementer` · `claude-opus-5-5`<br>`codex` · `gpt-6.1-sol` | medium<br>high |
 | **Trivial edits**: reformatting, renames, mechanical find-and-replace | 1. GPT-6 Luna<br>2. Claude Opus 5.5 | `codex` · `gpt-6-luna`<br>`opus-implementer` · `claude-opus-5-5` | medium<br>medium |
-| **Media and long reads**: images, PDF, video, audio, long documents | 1. Gemini 3.8 Flash<br>2. Claude Opus 5.5 | `agy` · `gemini-3.8-flash-high`<br>`opus-implementer` · `claude-opus-5-5` | (in the ID)<br>medium |
+| **Images**: screenshots, scanned pages, charts (image files) | 1. GPT-6.1 Terra<br>2. Gemini 3.8 Flash | `codex exec -i <file>` · `gpt-6.1-terra`<br>`agy` · `gemini-3.8-flash-high` | medium<br>(in the ID) |
+| **Media and long reads**: PDF, video, audio, long documents | 1. Gemini 3.8 Flash<br>2. Claude Opus 5.5 | `agy` · `gemini-3.8-flash-high`<br>`opus-implementer` · `claude-opus-5-5` | (in the ID)<br>medium |
 | **Single-file text** with no repo access: a conversion, a fixture, a draft | 1. Gemini 3.8 Flash<br>2. GPT-6.1 Sol | `agy` · `gemini-3.8-flash-high`<br>`codex` · `gpt-6.1-sol` | (in the ID)<br>medium |
 | **Hard reasoning**: maths, proofs, algorithms, science, very large documents | 1. GPT-6 Astra | `codex` · `gpt-6-astra` | low, raise only if needed |
 | **Review**: security review, second opinion on a design or a diff | 1. GPT-6 Astra (read-only)<br>2. Claude Opus 5.5 (read-only) | `codex -s read-only` · `gpt-6-astra`<br>`claude -p --restricted` · `claude-opus-5-5` (SKILL.md has the full command) | low<br>medium |
@@ -56,9 +60,17 @@ In our own words; the numbers live on the trackers linked at the bottom.
   security work. It is slow and expensive, so it gets hard problems and reviews, not bulk typing.
 - **Gemini 3.8 Flash** is fast and cheap, and strong at video and other media. It is weak at
   multi-step agent work, so it runs in plan mode and only its text output is used.
+- **GPT-6.1 Terra** reads images. Independent multimodal scores put it at or near the top of
+  the field, it is cheap per task, and it runs on Codex quota. On terminal and agentic coding
+  trackers it trails GPT-6.1 Sol clearly. Our bench (`bench/`) doesn't show that gap yet: both
+  passed 10/10 on 2026-10-27, Terra on fewer tokens. Code stays with Sol until the bench tests
+  the long agentic work where the trackers see the gap.
+  `codex exec -i` takes image files only, so PDF, video and audio stay with Gemini.
 - **GPT-6 Luna** is very cheap and fast but clearly weaker. Mechanical edits only.
-- **Not routed:** Claude Haiku 4.5 (last in every field), Claude Fable 5.1 (Opus 5.5 scores
-  higher and costs less), older GPT and Gemini tiers.
+- **Not routed:** Claude Haiku 5.5 (`claude-haiku-5-5`; the strongest small model, but very
+  verbose and it spends the Claude quota that cheaper Codex and Gemini tiers spare), Claude
+  Haiku 4.5 (replaced by Haiku 5.5), Claude Fable 5.1 (Opus 5.5 scores higher and costs less),
+  older GPT and Gemini tiers.
 
 ## Rules
 
@@ -100,9 +112,12 @@ In our own words; the numbers live on the trackers linked at the bottom.
 - **For the maintainer, on a new model (~15 min):**
   1. Confirm plan access in the vendor's release notes.
   2. Re-read the trackers below for every model in the table, not just the new one.
-  3. Redo the route table and "Why these picks". Bump the snapshot date.
-  4. For a new Opus, update `model:` in `agents/opus-implementer.md`.
-  5. Commit, then run `model_watch.py ack`.
+  3. Bench it: `python3 bench/bench.py codex|claude|agy <model> [effort]`, then the current
+     holder of the route it would take. It takes the route only if it passes more tasks, or
+     as many for no more cost. Results append to `bench/results.tsv`.
+  4. Redo the route table and "Why these picks". Bump the snapshot date.
+  5. For a new Opus, update `model:` in `agents/opus-implementer.md`.
+  6. Commit, then run `model_watch.py ack`.
 
 **Trackers**, in order of trust: [Artificial Analysis](https://artificialanalysis.ai) (runs its
 own evals, publishes cost per task) · [BenchLM](https://benchlm.ai) (per-field scores, shows

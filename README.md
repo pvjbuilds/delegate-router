@@ -97,7 +97,8 @@ map ("send this to Gemini").
 | Bulk code from a spec | GPT-6.1 Sol (Codex) | Claude Opus 5.5 |
 | Must be right, or the first pick failed | Claude Opus 5.5 | GPT-6.1 Sol |
 | Trivial mechanical edits | GPT-6 Luna (Codex) | Claude Opus 5.5 |
-| Media, PDFs, long documents | Gemini 3.8 Flash (agy) | Claude Opus 5.5 |
+| Images, screenshots, scanned pages | GPT-6.1 Terra (Codex) | Gemini 3.8 Flash |
+| PDFs, video, audio, long documents | Gemini 3.8 Flash (agy) | Claude Opus 5.5 |
 | Hard reasoning, security review (read-only) | GPT-6 Astra (Codex) | Claude Opus 5.5 |
 
 The reasons, effort levels, caveats and the council protocol for when two models disagree are
@@ -175,10 +176,47 @@ The key is never read from a file in this repo, never written to config and neve
 
 This removes only its own links. Add `--purge` to also delete the config and state.
 
+## How routes are tested (maintainer only)
+
+You don't run this: these runs are the maintainer's and cost you nothing. When a new model ships, the maintainer runs it through the bench against
+the model that holds the route now, and the result reaches you in your next `git pull`.
+Benchmarks pick a new model's first route; the bench decides whether it keeps it.
+
+Ten routine tasks, each with a hidden check that grades a temp copy of the model's work:
+
+| Task | What it asks |
+|---|---|
+| 1-function | Write a function to a spec |
+| 2-rename | Rename a function across three files |
+| 3-tests | Write tests for a module |
+| 4-convert | Convert CSV to JSON |
+| 5-extract | Pull four facts from a 2,000-word document |
+| 6-bugfix | Fix three bugs whose symptoms show in one file and causes sit in others |
+| 7-bisect | Find the first bad commit with `git`, when some commits can't run at all |
+| 8-image | Read a table and a chart from a screenshot |
+| 9-semver | Implement a long version-range spec; 73 hidden cases, one miss fails |
+| 10-migrate | Change a signature everywhere it's used, including indirect calls |
+
+```bash
+python3 bench/bench.py codex gpt-6.1-sol high
+```
+
+```bash
+python3 bench/bench.py --selfcheck
+```
+
+The first runs one model (`codex`, `claude` or `agy`, then the model ID and effort) and
+appends pass, seconds and tokens per task to `bench/results.tsv`. `--task 6` runs one task.
+`--selfcheck` runs no model: for each task with a reference answer in `ref/` (tasks 6–10), it
+proves the check fails on the untouched files and passes on that answer.
+
+Latest run (2026-10-27): GPT-6.1 Sol high and GPT-6.1 Terra medium both passed 10/10; Terra
+took 307 s to Sol's 467 s. The bench doesn't yet find where trackers put Sol ahead on coding.
+
 ## Tests
 
 ```bash
-python3 tests/test_model_watch.py && bash tests/test_install.sh
+python3 tests/test_model_watch.py && bash tests/test_install.sh && python3 bench/bench.py --selfcheck
 ```
 
 ```bash
@@ -209,8 +247,8 @@ Claude Code skill · Claude Code skills · Codex CLI skill · Codex skills · Ag
 Claude Code subagent · subagent · coding agent · AI coding agent · agentic coding · multi-agent ·
 save tokens · token optimization · reduce AI coding cost · cost per task · subscription quota ·
 model release watcher · new model alerts · OpenAI Codex · Google Gemini · Anthropic Claude ·
-Antigravity CLI · agy · Claude Opus 5.5 · GPT-6.1 Sol · GPT-6 Luna · GPT-6 Astra ·
-Gemini 3.8 Flash · TypeSafe Jev
+Antigravity CLI · agy · Claude Opus 5.5 · GPT-6.1 Sol · GPT-6.1 Terra · GPT-6 Luna · GPT-6 Astra ·
+Gemini 3.8 Flash · TypeSafe Jev · model benchmark · LLM eval
 
 ## License
 

@@ -1,0 +1,1 @@
+Convert `people.csv` in this folder to `people.json`: a JSON array of objects with keys name, city, joined, score. score is an integer, or null when empty. Keep row order. Write only the file; no script needs to stay behind.
