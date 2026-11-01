@@ -95,7 +95,8 @@ Not reviewed by another model. Live AA dry-run: three proposals (Hard reasoning,
 Trivial edits), nothing applied.
 2026-11-01: v1.4.1 released, docs only: diagram re-rendered (archify, `docs/workflow.json`; PNGs are
 playwright crops of the light/dark views), README FAQ as headings, install-with-an-agent prompt,
-GitHub releases backfilled for v1.2.0-v1.4.1. Social preview image must be uploaded by hand.
+GitHub release pages for v1.2.0-v1.4.1, new description, social preview uploaded (Praj). Public-repo
+checklist (search and agents): vault RULES §11.
 Candidates for v1.5: opt-in auto-update (the background check runs `git pull --ff-only` on new
 tagged releases; off by default; needs a cross-provider review), a bench task for long agentic
 work, bench hardening (run model CLIs with integrations off, a stronger task 3, record CLI
