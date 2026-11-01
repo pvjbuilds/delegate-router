@@ -21,6 +21,10 @@ model the user also pays for, reached through its own CLI. Each has its own quot
 **Verification is always the host's.** "Done" from a delegate is not evidence. Run the check,
 read the diff, and confirm it did what was asked *and nothing else*.
 
+**Your own rules.** If `${XDG_CONFIG_HOME:-~/.config}/delegate-router/LOCAL.md` exists, read
+it first. It is the user's file, outside this repo (CLI paths, effort limits, data gates,
+extra routes); **where it disagrees with this file or ROUTING.md, it wins.**
+
 ## 1. Judge: every time, before delegating
 
 Delegating costs the host tokens too: it writes the spec and reads the result.

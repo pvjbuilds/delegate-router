@@ -128,6 +128,24 @@ python3 ~/.delegate-router/skills/delegate/scripts/model_watch.py status
 State lives in `~/.local/state/delegate-router/`, settings in
 `~/.config/delegate-router/config.env` (see [config.example.env](config.example.env)).
 
+## Your own rules
+
+Put rules that are yours alone in `${XDG_CONFIG_HOME:-~/.config}/delegate-router/LOCAL.md`
+(usually `~/.config/delegate-router/LOCAL.md`): CLI paths, a ceiling on
+effort, files that must never leave your machine, a route you prefer. The skill reads it first
+on every run, and **where it disagrees with SKILL.md or ROUTING.md, your file wins.** It lives
+outside the repo, so `git pull` never touches it and it is never committed. Plain Markdown, no
+fixed format; for example:
+
+```markdown
+- Never send anything under ~/work/clients/ to a delegate.
+- GPT models: high effort at most.
+- Images go to Gemini first.
+```
+
+The installer doesn't create or edit it, and `uninstall.sh --purge` leaves it in place. It
+changes what the skill reads, not the watcher.
+
 ## Jev (optional)
 
 [Jev](https://typesafe.ai) (TypeSafe) is a very cheap classifier, about $0.0001 per call.
@@ -174,7 +192,8 @@ The key is never read from a file in this repo, never written to config and neve
 ~/.delegate-router/uninstall.sh
 ```
 
-This removes only its own links. Add `--purge` to also delete the config and state.
+This removes only its own links. Add `--purge` to also delete the config and state; your
+`LOCAL.md` stays.
 
 ## How routes are tested (maintainer only)
 

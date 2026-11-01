@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.2.0 (2026-10-27)
+
+**Added**
+- Your own rules: the skill reads `~/.config/delegate-router/LOCAL.md` (or under
+  `$XDG_CONFIG_HOME`) first when it exists, and where it disagrees with SKILL.md or
+  ROUTING.md, it wins. It sits outside the repo, so `git pull` never touches it. README:
+  "Your own rules".
+
+**Fixed**
+- `uninstall.sh --purge` deleted the whole config folder. It now removes `config.env` and the
+  state folder and keeps `LOCAL.md`. The install test covers both.
+
 ## v1.1.0 (2026-10-27)
 
 **Added**

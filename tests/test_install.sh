@@ -76,13 +76,22 @@ bash "$REPO/uninstall.sh" > /dev/null
 [ -L "$HOME/.claude/skills/delegate" ] || fail "uninstall removed a link that only looked like ours"
 rm "$HOME/.claude/skills/delegate"
 printf 'y\ny\n' | bash "$REPO/install.sh" > /dev/null
+LOCAL="$(dirname "$CONF")/LOCAL.md" STATE="$XDG_STATE_HOME/delegate-router"
+[ ! -e "$LOCAL" ] || fail "install created LOCAL.md"
+echo "my rules" > "$LOCAL" && mkdir -p "$STATE" && touch "$STATE/state.json"
+bash "$REPO/install.sh" --yes < /dev/null > /dev/null
+[ "$(cat "$LOCAL")" = "my rules" ] || fail "install touched LOCAL.md"
 out="$(bash "$REPO/uninstall.sh")"
 [ ! -e "$HOME/.claude/skills/delegate" ] || fail "claude link left behind"
 [ -d "$HOME/.agents/skills/delegate" ] && [ -L "$HOME/.claude/agents/opus-implementer.md" ] || fail "uninstall removed a foreign path"
-[ -f "$CONF" ] || fail "config removed without --purge"
+[ -f "$CONF" ] && [ -f "$STATE/state.json" ] || fail "config or state removed without --purge"
+[ "$(cat "$LOCAL")" = "my rules" ] || fail "uninstall deleted the user's LOCAL.md"
 bash "$REPO/uninstall.sh" --purge > /dev/null
-[ ! -e "$CONF" ] || fail "--purge kept config"
-ok uninstall_removes_only_ours_and_purge_is_opt_in
+[ ! -e "$CONF" ] && [ ! -e "$STATE" ] || fail "--purge kept config or state"
+[ "$(cat "$LOCAL")" = "my rules" ] || fail "--purge deleted the user's LOCAL.md"
+grep -q 'delegate-router/LOCAL.md' "$REPO/skills/delegate/SKILL.md" || fail "SKILL.md doesn't read LOCAL.md"
+rm "$LOCAL"
+ok uninstall_removes_only_ours_and_purge_is_opt_in_and_keeps_local_rules
 
 rm -rf "$HOME"
 PATH="$T/nothing:/usr/bin:/bin" bash "$REPO/install.sh" --yes > /dev/null

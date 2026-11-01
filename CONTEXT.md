@@ -43,6 +43,9 @@ another model the user already pays for, picked from `skills/delegate/ROUTING.md
   model's first route, then it runs the bench against the route's current holder first.
 - 2026-10-27: Terra medium tied Sol high on the bench (10/10, fewer tokens). The maintainer
   kept code on Sol. The bench section in the README is maintainer-only and names no token cost.
+- 2026-10-27: One installed copy. Anything only one user wants (paths, effort limits, data
+  gates, figures) lives in their `LOCAL.md`, never in the repo; it wins over SKILL.md and
+  ROUTING.md. The installer never creates or edits it.
 - 2026-09-30: The installer prints the Codex `network_access` and SessionStart hook snippets
   instead of editing user settings.
 - Verified live 2026-09-30: `agy -p --model <slug> --sandbox` and the `claude -p
@@ -60,7 +63,10 @@ permissions; `agy` has no integrations switch; Codex plugins and admin config st
 `*_BIN` is watcher-only; `status` may start the 12 h check.
 2026-10-27: v1.1.0 prepared: `bench/` (10 tasks with `--selfcheck`), an image route
 (GPT-6.1 Terra), Claude Haiku 5.5 listed as not routed, the bench rule in ROUTING.md.
-Candidates for v1.2: opt-in auto-update (the background check runs `git pull --ff-only` on new
+2026-10-27: v1.2.0 prepared: one installed copy. The maintainer's `~/.claude/skills/delegate`
+links to this repo; a user's own rules go in `~/.config/delegate-router/LOCAL.md`, which the
+skill reads first and which wins; `uninstall.sh --purge` keeps it.
+Candidates for v1.3: opt-in auto-update (the background check runs `git pull --ff-only` on new
 tagged releases; off by default; needs a cross-provider review), a bench task for long agentic
 work, bench hardening (run model CLIs with integrations off, a stronger task 3, record CLI
 timeouts apart from check failures), keep custom Codex providers in delegate calls (`--ignore-user-config` drops them today),
