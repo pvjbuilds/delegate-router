@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.4.1 (2026-11-01)
+
+**Docs**
+- The README diagram shows another subscription first and the bench that gates route changes.
+- README: install with an AI agent, which model a Codex host picks, how this differs from
+  OpenRouter or LiteLLM; FAQ entries are headings, so they can be linked.
+- `docs/social-preview.png` for the GitHub social preview.
+
 ## v1.4.0 (2026-11-01)
 
 **Changed**

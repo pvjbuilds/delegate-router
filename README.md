@@ -1,6 +1,6 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/workflow-dark.png">
-  <img alt="Workflow: your task goes to the host agent, which judges it, picks a model from ROUTING.md, writes a spec, hands the packet to a delegate model (Codex, Gemini via agy, or Claude), and verifies the diff. model_watch.py and the optional Jev scout keep the routing and the spec current." src="docs/workflow-light.png">
+  <img alt="delegate-router workflow: your task goes to the host agent (Claude Code or Codex CLI), which judges it, picks a model from ROUTING.md (one on another of your subscriptions first), writes a spec, hands the packet to a delegate model (Codex, Gemini via agy, or a Claude subagent), and verifies the diff. The bench gates route changes, model_watch.py re-checks the routes every 12 hours, and the optional Jev scout picks the files for the spec." src="docs/workflow-light.png">
 </picture>
 
 # delegate-router: multi-model task delegation for Claude Code and Codex CLI
@@ -27,8 +27,10 @@ quota and context.
   snapshot, and tells you when a route should change. A tracker rescaling its scores moves
   nothing; a model that really beats the holder does.
 
-**New in v1.3:** routes re-check themselves ([how](#routes-that-keep-themselves-current)), and
-bulk code now goes to GPT-6.1 Terra first. See the [changelog](CHANGELOG.md).
+**New in v1.4:** work goes to a model on another of your subscriptions first, so your main
+agent's quota isn't spent twice ([how](#which-model-does-it-pick-when-my-main-agent-is-codex)).
+Each route is judged on its own benchmark, and a route switches only on a cost per task measured
+on our bench ([how](#routes-that-keep-themselves-current)). See the [changelog](CHANGELOG.md).
 
 Interactive diagram: [docs/workflow.html](docs/workflow.html) (open it locally).
 
@@ -85,6 +87,17 @@ Codex settings. It prints two optional snippets instead:
 
 Restart Claude Code or Codex after installing.
 
+### Install with an AI agent
+
+Paste this into Claude Code or Codex:
+
+> Install delegate-router: clone https://github.com/pvjbuilds/delegate-router to
+> ~/.delegate-router, run `~/.delegate-router/install.sh --yes`, show me the two snippets it
+> prints, and tell me to restart.
+
+`--yes` takes every default and asks nothing. The agent should not apply the printed snippets
+for you: they change your own settings.
+
 ## Use
 
 Ask the host to delegate, or type `/delegate`:
@@ -106,6 +119,11 @@ map ("send this to Gemini").
 | Images, screenshots, scanned pages | GPT-6.1 Terra (Codex) | Gemini 3.8 Flash |
 | PDFs, video, audio, long documents | Gemini 3.8 Flash (agy) | Claude Opus 5.5 |
 | Hard reasoning, security review (read-only) | GPT-6 Astra (Codex) | Claude Opus 5.5 |
+
+Your main agent's own plan is skipped where the row has an alternative, so the work lands on
+another subscription: on a Codex host, bulk code goes to Claude Opus 5.5; on a Claude Code host,
+it stays on GPT-6.1 Terra. **Must be right** and **Trivial edits** keep their order on every
+host. To keep your own plan first, say so in your [LOCAL.md](#your-own-rules).
 
 The reasons, effort levels, caveats and the council protocol for when two models disagree are
 in [ROUTING.md](skills/delegate/ROUTING.md). Benchmarks are a prior; a check on the real task
@@ -289,17 +307,34 @@ All offline: stub CLIs, local pages, a temp `HOME`. No network, no spend.
 
 ## FAQ
 
-**Why a clone and an install script, not a plugin?** Both Claude Code and Codex support
-plugins, and the folder is already laid out like one. A plugin can't ask setup questions, and
-it would install a separate copy per host. A plugin package may follow; the skill itself won't
-change.
+### Which model does it pick when my main agent is Codex?
 
-**Does it work with only one agent installed?** It installs, but there's nothing to route to.
-Delegation needs a second model.
+The first model in the row that runs on another plan: Claude Opus 5.5 for bulk code and review,
+Gemini 3.8 Flash for images. Trivial edits stay on GPT-6 Luna, and "must be right" work stays
+on Claude Opus 5.5. With Claude Code as the host, most rows go to Codex models. If nothing on
+another plan is installed, it uses your own plan and says so.
 
-**Will it spend my money?** Only through subscriptions you already have, when you delegate.
-Background checks read public pages, your CLIs' model lists and, if you add a free key,
-Artificial Analysis's data API. Probes and Jev run only if you turn them on.
+### How is this different from OpenRouter or LiteLLM?
+
+Those route single API calls and bill per token through an API key. delegate-router routes
+whole tasks to the coding CLIs you already subscribe to (Codex, `agy`, Claude Code), with no
+API keys and no proxy. The host agent writes the spec and checks the diff itself.
+
+### Why a clone and an install script, not a plugin?
+
+Both Claude Code and Codex support plugins, and the folder is already laid out like one. A
+plugin can't ask setup questions, and it would install a separate copy per host. A plugin
+package may follow; the skill itself won't change.
+
+### Does it work with only one agent installed?
+
+It installs, but there's nothing to route to. Delegation needs a second model.
+
+### Will it spend my money?
+
+Only through subscriptions you already have, when you delegate. Background checks read public
+pages, your CLIs' model lists and, if you add a free key, Artificial Analysis's data API.
+Probes and Jev run only if you turn them on.
 
 ## Keywords
 
@@ -307,7 +342,8 @@ task delegation · delegate coding tasks · AI code delegation · LLM router · 
 router · model routing · multi-model routing · multi-model · multi-LLM · cross-model code review ·
 Claude Code skill · Claude Code skills · Codex CLI skill · Codex skills · Agent Skills · SKILL.md ·
 Claude Code subagent · subagent · coding agent · AI coding agent · agentic coding · multi-agent ·
-save tokens · token optimization · reduce AI coding cost · cost per task · subscription quota ·
+use your ChatGPT plan in Claude Code · use your Claude plan in Codex · spread work across
+subscriptions · quota pooling · save tokens · token optimization · reduce AI coding cost · cost per task · subscription quota ·
 model release watcher · new model alerts · benchmark-driven routing · self-updating routes · OpenAI Codex · Google Gemini · Anthropic Claude ·
 Antigravity CLI · agy · Claude Opus 5.5 · GPT-6.1 Sol · GPT-6.1 Terra · GPT-6 Luna · GPT-6 Astra ·
 Gemini 3.8 Flash · TypeSafe Jev · model benchmark · LLM eval
