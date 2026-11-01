@@ -16,13 +16,21 @@ is more than 60 days old or when your CLIs list a model it doesn't cover yet.
 
 Walk the candidates in order and take the first one that:
 
-1. **is installed** (`model_watch.py status` lists the CLIs), and
+1. **is installed** (`model_watch.py status` lists the CLIs),
 2. **is not the host's own model.** Same model, same quota: no gain. One exception: inside
    Claude Code, the `opus-implementer` subagent is allowed even when the host is Opus,
-   because it keeps the file reads and tool turns out of the main context.
+   because it keeps the file reads and tool turns out of the main context, and
+3. **runs on another subscription than the host**, when the row has one installed. The
+   subscription goes by CLI: `codex` is the OpenAI plan, `claude` and `opus-implementer` the
+   Anthropic plan, `agy` the Google plan. This spreads the work across the plans you pay for.
+   If no candidate on another plan is installed, take the first one on the host's plan and say
+   so in one line.
 
-Other models on the host's subscription are allowed (a Codex host may send trivial edits to
-a cheaper Codex model), but they draw on the same quota.
+Two rows skip rule 3 and walk in plain order:
+
+- **Must be right**: correctness matters more than quota.
+- **Trivial edits**: a rename isn't worth a stronger model's quota; the cheap model stays first
+  even on the host's plan.
 
 If nothing in a row qualifies, the host does the work itself.
 

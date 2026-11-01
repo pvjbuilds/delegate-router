@@ -9,6 +9,9 @@ instructions name a cross-project rules file, read it too.
 **Verify** with the offline suite before claiming a change works:
 `python3 tests/test_model_watch.py && bash tests/test_install.sh && python3 bench/bench.py --selfcheck`, plus
 `uv run -q tests/test_jev.py && uv run -q tests/test_scout.py` when `jev.py` changes.
+Before asking the maintainer for a release go on a `model_watch.py` change, also run it live
+on throwaway state and read the alerts (the offline suite missed two flaws on 2026-11-01):
+`S=$(mktemp -d); DELEGATE_ROUTER_STATE=$S AUTO_UPDATE_CLI=0 BACKGROUND=0 python3 skills/delegate/scripts/model_watch.py run; DELEGATE_ROUTER_STATE=$S BACKGROUND=0 python3 skills/delegate/scripts/model_watch.py routes`
 
 **Review:** cross-provider. A change to the installer, the watcher's update/probe path, or the
 Jev data handling gets a read-only review from a model of another provider before release.
@@ -50,6 +53,14 @@ another model the user already pays for, picked from `skills/delegate/ROUTING.md
   within one snapshot; tie margin 1% (the maintainer's choice). Figures stay in state, never in
   the repo. The Artificial Analysis key is optional; the BenchLM fallback only proposes.
   `AUTO_ROUTE` defaults to 0.
+- 2026-11-01 (v1.4.0, maintainer's picks): each route has its own benchmark (code: coding index,
+  else Terminal-Bench v4; Must be right: Terminal-Bench v4; Hard reasoning: HLE; Review:
+  intelligence index). Cost is cost per task measured on `bench/` tokens x AA input/output
+  prices; only measured runs apply. Unbenched proposals need a higher score at no more per-token
+  price and say cost per task is not measured. The AA API has no cost-per-task or token fields.
+- 2026-11-01: Another subscription first (maintainer, public repo): a row's first installed
+  candidate on a plan other than the host's wins; the host's plan only when none is installed.
+  Must be right and Trivial edits keep plain order. The maintainer's own `LOCAL.md` turns it off.
 - 2026-09-30: The installer prints the Codex `network_access` and SessionStart hook snippets
   instead of editing user settings.
 - Verified live 2026-09-30: `agy -p --model <slug> --sandbox` and the `claude -p
@@ -78,7 +89,11 @@ refresh only when it changes.
 2026-11-01: v1.3.1 released: first live AA run (719 records). The holder's own model at another
 effort is no longer a challenger. AA publishes no coding index today, so Bulk code and Trivial
 edits are skipped (logged) until it does; the reasoning rows are judged.
-Candidates for v1.4: opt-in auto-update (the background check runs `git pull --ff-only` on new
+2026-11-01: v1.4.0 released: another subscription first; per-row benchmarks and bench-measured
+cost per task (see Decisions).
+Not reviewed by another model. Live AA dry-run: three proposals (Hard reasoning, Review,
+Trivial edits), nothing applied.
+Candidates for v1.5: opt-in auto-update (the background check runs `git pull --ff-only` on new
 tagged releases; off by default; needs a cross-provider review), a bench task for long agentic
 work, bench hardening (run model CLIs with integrations off, a stronger task 3, record CLI
 timeouts apart from check failures), keep custom Codex providers in delegate calls (`--ignore-user-config` drops them today),

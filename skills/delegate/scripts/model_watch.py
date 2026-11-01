@@ -71,12 +71,12 @@ AA_URL = E("DELEGATE_ROUTER_AA_URL") or "https://artificialanalysis.ai/api/v2/da
 BENCHLM_URL = E("DELEGATE_ROUTER_BENCHLM_URL") or "https://benchlm.ai/data/models.json"
 AA_KEY = "ARTIFICIAL_ANALYSIS_API_KEY"
 MAX_SNAPSHOT = 32 << 20  # the BenchLM export alone is ~4 MB
-ROWS = {"Bulk code": "coding", "Trivial edits": "coding", "Must be right": "reasoning",
-        "Hard reasoning": "reasoning", "Review": "reasoning"}  # other rows: no index measures them
+# each row's own benchmark, first one the holder has a score on (maintainer, 2026-11-01); other rows: none fits
+ROWS = {"Bulk code": ("coding", "terminal"), "Trivial edits": ("coding", "terminal"), "Must be right": ("terminal",),
+        "Hard reasoning": ("hle",), "Review": ("reasoning",)}
+LABEL = {"coding": "coding index", "terminal": "Terminal-Bench v4", "hle": "HLE", "reasoning": "intelligence index"}
 EFFORTS = ("low", "medium", "high")  # high is the ceiling (ROUTING.md); never xhigh or max
-TIE = 0.99  # within 1% and cheaper counts as better (maintainer, 2026-11-01)
-# shortcut: price per 1M tokens stands in for cost per task (verbose models look cheap); the bench gate
-# catches that before anything is applied. Upgrade if the AA API publishes cost to run the index.
+TIE = 0.99  # within 1% and cheaper per task counts as better (maintainer, 2026-11-01)
 
 
 def config():
@@ -306,9 +306,12 @@ def snapshot():
             for m in body.get("data", []) if isinstance(body, dict) else body:
                 ev = m.get("evaluations") or {}
                 get = lambda k: num(m.get(k, ev.get(k)))  # noqa: E731  flat or nested
+                pr = m.get("pricing") or {}
                 scores[m["slug"]] = {"coding": get("artificial_analysis_coding_index"),
                                      "reasoning": get("artificial_analysis_intelligence_index"),
-                                     "price": num((m.get("pricing") or {}).get("price_1m_blended_3_to_1"))}
+                                     "terminal": get("terminalbench_v4_0"), "hle": get("hle"),
+                                     "price": num(pr.get("price_1m_blended_3_to_1")),
+                                     "in": num(pr.get("price_1m_input_tokens")), "out": num(pr.get("price_1m_output_tokens"))}
             source = "aa"
         else:
             scores = {m["slug"]: {"coding": num(m["scores"]["displayCategoryScores"].get("coding")),
@@ -344,7 +347,7 @@ def table():
 
 
 def bench_rows():
-    """{(model, effort): {task: (passed, tokens or None)}}, the latest row per task."""
+    """{(model, effort): {task: (passed, tokens or None, (input, output) or None)}}, the latest row per task."""
     out = {}
     try:
         lines = BENCH.read_text().splitlines()
@@ -356,23 +359,28 @@ def bench_rows():
         try:
             i, o = r.get("input_tokens"), r.get("output_tokens")
             tokens = int(i) + int(o) if i and o else None
-            out.setdefault((r["model"], r["effort"]), {})[r["task"]] = (r["result"] == "PASS", tokens)
+            io = (int(i), int(o)) if i and o else None
+            out.setdefault((r["model"], r["effort"]), {})[r["task"]] = (r["result"] == "PASS", tokens, io)
         except (KeyError, ValueError):
             continue
     return out
 
 
-def benched_against(rows, c, h):
-    """Over H's tasks: C ran them all, passed more, or as many on no more tokens (all counts known)."""
+def bench_cost(rows, c, h, cp, hp):
+    """Over H's bench tasks: None if C didn't run them all, False if it passed fewer; else (C's, H's) cost of
+    those runs in $, from the recorded tokens and each model's per-1M prices (None where a count or price is missing)."""
     rh = rows.get(h, {})
     rc = {t: v for t, v in rows.get(c, {}).items() if t in rh}
     if not rh or set(rc) != set(rh):
+        return None
+    if sum(v[0] for v in rc.values()) < sum(v[0] for v in rh.values()):
         return False
-    pc, ph = sum(p for p, _ in rc.values()), sum(p for p, _ in rh.values())
-    if pc != ph:
-        return pc > ph
-    toks = [t for _, t in list(rc.values()) + list(rh.values())]
-    return all(t for t in toks) and sum(t for _, t in rc.values()) <= sum(t for _, t in rh.values())
+
+    def cost(runs, p):
+        if any(v[2] is None for v in runs) or not p or p.get("in") is None or p.get("out") is None:
+            return None
+        return sum(v[2][0] * p["in"] + v[2][1] * p["out"] for v in runs) / 1e6
+    return cost(rc.values(), cp), cost(rh.values(), hp)
 
 
 def norm(model):
@@ -412,7 +420,7 @@ def judge(st, snap, cat):
             row, o.get("model"), o.get("effort"), default, why))
 
     for row, cands in table().items():
-        (dm, de, _), field = cands[0], ROWS[row]
+        dm, de, _ = cands[0]
         default = "{} {}".format(dm, de)
         ov = routes.get(row)
         if ov and (ov.get("model") not in names or (ov.get("source") == "catalog" and dm in names)):
@@ -432,39 +440,51 @@ def judge(st, snap, cat):
         hm, he = (ov["model"], ov.get("effort", "")) if ov else (dm, de)
         held = "{} {}".format(hm, he)
         hs = record(scores, hm, he)[0]
-        hi, hp = (scores[hs][field], scores[hs]["price"]) if hs else (None, None)
-        if hi is None or (aa and hp is None):
+        field = next((f for f in ROWS[row] if hs and scores[hs].get(f) is not None), None)
+        if not field:
             with open(STATE_DIR / "watch.log", "a") as log:
-                log.write("routes: no {} {} score for {}; row {} skipped\n".format(snap["source"], field, held, row))
+                log.write("routes: no {} {} score for {}; row {} skipped\n".format(
+                    snap["source"], " or ".join(ROWS[row]), held, row))
             continue
+        hi, hp = scores[hs][field], scores[hs].get("price")
         best, tried = None, set()
         for m in sorted(names):
             for e in EFFORTS:
                 slug, label = record(scores, m, e)
                 if slug == norm(m):  # no effort in the record: judged once, at the holder's effort
                     label = he
-                if not slug or m == hm or slug in tried:  # price per token can't judge an effort change of the holder
+                if not slug or m == hm or slug in tried:  # an effort change of the holder is ROUTING.md's call
                     continue
                 tried.add(slug)
-                ci, cp = scores[slug][field], scores[slug]["price"]
-                if ci is None or (aa and cp is None):
+                ci = scores[slug].get(field)
+                if ci is None:
                     continue
-                wins = (ci > hi and cp <= hp) or (ci >= TIE * hi and cp < hp) if aa else ci > hi
-                if wins and (not best or (-ci, cp or 0) < (-best[2], best[3] or 0)):
-                    best = (m, label, ci, cp)
+                b = bench_cost(rows, (m, label), (hm, he), scores[slug], scores[hs])
+                if b is False:
+                    continue  # passed fewer of the holder's bench tasks: our own check beats any benchmark
+                cc, hc = b if b and aa else (None, None)
+                cp = scores[slug].get("price")
+                measured = cc is not None and hc is not None
+                if measured:  # applies: score and cost per task both real
+                    wins = (ci > hi and cc <= hc) or (ci >= TIE * hi and cc < hc)
+                elif aa:  # proposes only; no dearer per token keeps a big model off a cheap route
+                    wins = ci > hi and cp is not None and hp is not None and cp <= hp
+                else:  # BenchLM has no prices: only a model our bench already passed
+                    wins = ci > hi and bool(b)
+                if wins and (not best or (not measured, -ci, cc or cp or 0) < (not best[5], -best[2], best[3] or best[7] or 0)):
+                    best = (m, label, ci, cc, hc, measured, bool(b), cp)
         prop = None
         if best:
-            m, label, ci, cp = best
+            m, label, ci, cc, hc, measured, ok, cp = best
             cli = owner.get(m, "")
-            fig = "{} {:g} vs {:g}, ".format("coding index" if field == "coding" else "intelligence index", ci, hi) \
-                + "${:g}/1M vs ${:g}/1M".format(cp, hp) if aa else \
-                "{} {:g} vs {:g}, no price data".format(field, ci, hi)
-            ok = benched_against(rows, (m, label), (hm, he))
+            fig = "{} {:.3g} vs {:.3g}, ".format(LABEL[field] if aa else field, ci, hi) + (
+                "${:.3g}/task vs ${:.3g}/task on our bench".format(cc, hc) if measured else
+                "${:g}/1M vs ${:g}/1M per token, cost per task not measured".format(cp, hp) if aa else "no price data")
             entry = {"model": m, "effort": label, "cli": cli, "index": fig, "source": snap["source"], "was": held, "at": today}
             if ov and (m, label) == (dm, de):
                 drop(row, " " + fig)  # the table's own pick wins again
                 changed += 1
-            elif aa and auto and ok:
+            elif auto and measured:
                 changed += (ov or {}).get("model") != m or (ov or {}).get("effort") != label
                 routes[row] = entry
                 clear(row)
@@ -493,7 +513,7 @@ def check_routes(st, cat):
     old, st["snapshot"] = st.get("snapshot"), snap
     n = judge(st, snap, cat)
     if old and old.get("source") == snap["source"]:
-        for field in ("coding", "reasoning"):
+        for field in LABEL:
             ratios = [snap["scores"][s][field] / old["scores"][s][field] for s in set(snap["scores"]) & set(old["scores"])
                       if snap["scores"][s][field] is not None and old["scores"][s][field]]
             med = statistics.median(ratios) if ratios else 1

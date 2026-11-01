@@ -15,8 +15,9 @@ quota and context.
 
 - **Routing by task, not by habit.** [ROUTING.md](skills/delegate/ROUTING.md) maps each kind of
   task to an ordered list of models, chosen from independent benchmarks and cost per task.
-  It skips any CLI you don't have and never routes back to the host's own model, except an
-  Opus subagent under an Opus host, which keeps the main context clean.
+  It skips any CLI you don't have, never routes back to the host's own model (except an
+  Opus subagent under an Opus host, which keeps the main context clean), and prefers a model
+  on another of your subscriptions, so the work spreads across the plans you pay for.
 - **A judge before every handoff.** Four gates (bulk, decided, verifiable, contained) and a
   never-delegate list (debugging, architecture, security code, anything under ~40 lines).
 - **The host always verifies.** A delegate's "done" isn't evidence: the host runs the check and
@@ -133,22 +134,33 @@ python3 ~/.delegate-router/skills/delegate/scripts/model_watch.py status
 
 ### Routes that keep themselves current
 
-The background check also re-checks five routes (Bulk code, Trivial edits, Must be right,
-Hard reasoning, Review) against a fresh benchmark snapshot. A model your CLIs list takes a
-route only if it beats the current holder on the same snapshot: a higher score for no more
-money, or a score within 1% for less money. Comparing within one snapshot means a tracker
-rescaling its scores never moves a route by itself.
+The background check also re-checks five routes against a fresh benchmark snapshot, each on
+the score that fits its job:
 
-- **Proposed** (the default): `status` prints the change and the bench command to run.
-- **Applied**: with `AUTO_ROUTE=1`, and only once the challenger has matched or beaten the
-  holder on `bench/`, the route switches for your machine. ROUTING.md is never edited; the
-  figures stay in the state folder.
+| Route | Judged on |
+|---|---|
+| Bulk code, Trivial edits | coding index, or Terminal-Bench v4 while the coding index is unpublished |
+| Must be right | Terminal-Bench v4 (terminal-heavy agent work) |
+| Hard reasoning | HLE (Humanity's Last Exam) |
+| Review | intelligence index |
+
+Scores are compared only within one snapshot, so a tracker rescaling its scores never moves a
+route by itself. A switch is decided on cost per task, never on price per token: the tokens
+each model spent on our `bench/` tasks, at its input and output prices.
+
+- **Applied** (with `AUTO_ROUTE=1`): the challenger passed as many bench tasks as the holder,
+  and either scores higher at no more cost per task, or within 1% for less. The route switches
+  for your machine. ROUTING.md is never edited; the figures stay in the state folder.
+- **Proposed**: the challenger scores higher and costs no more per token, but nobody has
+  benched it yet. `status` prints the bench command, and says the cost per task is not measured.
+- A model that passed fewer of the holder's bench tasks is never put forward: a check on real
+  tasks beats any benchmark.
 - If a route's model drops out of your CLIs, the next candidate in that row moves up.
 
 The scores come from Artificial Analysis when `ARTIFICIAL_ANALYSIS_API_KEY` is set (environment,
-or the macOS keychain). The key is optional: without it, BenchLM's public data is used, which
-has no prices, so changes are only ever proposed. `routes` prints just these lines; `ack`
-clears proposals and notices.
+or the macOS keychain). The key is optional: without it, BenchLM's public data is used. It has
+no prices, so it only proposes models your bench already passed. `routes` prints just these
+lines; `ack` clears proposals and notices.
 
 State lives in `~/.local/state/delegate-router/`, settings in
 `~/.config/delegate-router/config.env` (see [config.example.env](config.example.env)).

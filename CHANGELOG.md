@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.4.0 (2026-11-01)
+
+**Changed**
+- Routing prefers a model on another of your subscriptions (OpenAI via `codex`, Anthropic via
+  `claude`/`opus-implementer`, Google via `agy`), so delegated work spreads across your plans.
+  It falls back to the host's plan only when no other is installed, and says so. Must be right
+  and Trivial edits keep their plain order. A `LOCAL.md` can turn this off.
+- Each route is judged on the score that fits it: coding index (Terminal-Bench v4 while AA
+  publishes none) for code, Terminal-Bench v4 for Must be right, HLE for Hard reasoning, the
+  intelligence index for Review.
+- Cost is cost per task, measured: the tokens each model spent on `bench/` at its input and
+  output prices. Only a measured run is applied. An unbenched model is proposed only if it scores
+  higher and costs no more per token, and the alert says its cost per task is not measured.
+- Without an AA key, BenchLM only proposes models the bench already passed.
+
 ## v1.3.1 (2026-11-01)
 
 **Fixed**

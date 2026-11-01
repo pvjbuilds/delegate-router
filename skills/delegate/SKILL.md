@@ -59,10 +59,11 @@ code.* Say so in one line and move on.
    candidate for this run; `(proposed)` lines are reported to the user, not acted on.
 2. **The user named a model?** Use it. Done.
 3. **Otherwise read [ROUTING.md](ROUTING.md)** (same folder) and take the row that matches the
-   task. Walk its candidates in order and take the first one that is **installed** and is
-   **not the host's own model**. One exception: under an Opus host, the `opus-implementer`
-   subagent is allowed, because it keeps file reads and tool turns out of the main context.
-   Don't route from memory.
+   task. Walk its candidates in order and take the first one that is **installed**, is
+   **not the host's own model**, and **runs on another subscription than the host** when the
+   row has one (ROUTING.md, "How to read a row", has the plans and the two rows that skip this).
+   One exception: under an Opus host, the `opus-implementer` subagent is allowed, because it
+   keeps file reads and tool turns out of the main context. Don't route from memory.
 
 ## 2b. Scout before the spec (optional, needs Jev)
 
@@ -180,7 +181,7 @@ Always end with the scope fence **"Change nothing else."**
 ## 5. The loop
 
 1. **Judge.** Apply the four gates. If any fails, write the code in the host and say why in one line.
-2. **Pick.** The user's named model, otherwise ROUTING.md (installed, not the host).
+2. **Pick.** The user's named model, otherwise ROUTING.md (installed, not the host, another plan first).
 3. **Scout** (only with Jev on, when 2b applies).
 4. **Spec.** Include the scope fence. For Codex, add the test-safety line.
 5. **Run.** On failure or quota-out, fall through to the next candidate; don't retry the same model.

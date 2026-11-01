@@ -310,7 +310,8 @@ KEY = {"ARTIFICIAL_ANALYSIS_API_KEY": "SECRET"}
 def scores(rows, x=1.0):
     """rows: slug -> (coding, price). Intelligence index is fixed so only coding decides."""
     aa.write_text(json.dumps({"data": [{"slug": s, "evaluations": {"artificial_analysis_coding_index": c * x,
-                  "artificial_analysis_intelligence_index": 50 * x}, "pricing": {"price_1m_blended_3_to_1": p}}
+                  "artificial_analysis_intelligence_index": 50 * x}, "pricing": {"price_1m_blended_3_to_1": p,
+                  "price_1m_input_tokens": p, "price_1m_output_tokens": p}}
                   for s, (c, p) in rows.items()]}))
 
 
@@ -348,7 +349,7 @@ def test_dominating_benched_model_is_applied():
     out = routes({"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (75, 10)}, "<code>claude-opus-6</code>",
                  (("gpt-6-sol", "high"), ("claude-opus-6", "medium")), AUTO_ROUTE="1")
     assert "ROUTE Bulk code: gpt-6-sol high -> claude-opus-6 medium (applied). coding index 75" in out, out
-    assert "$10" in out, out
+    assert "/task vs $" in out and "/1M" not in out, out
 
 
 def test_unbenched_or_auto_off_is_only_proposed():
@@ -365,9 +366,42 @@ def test_the_holders_own_model_at_another_effort_is_never_a_challenger():
     assert "ROUTE" not in out, out
 
 
-def test_tie_margin_is_one_percent():
-    assert "(proposed)" in routes({"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (69.4, 9)}, "<code>claude-opus-6</code>")
-    assert "ROUTE" not in routes({"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (68.9, 9)}, "<code>claude-opus-6</code>")
+def test_tie_margin_is_one_percent_on_a_measured_cheaper_run():
+    both = (("gpt-6-sol", "high"), ("claude-opus-6", "medium"))
+    assert "(proposed)" in routes({"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (69.4, 9)}, "<code>claude-opus-6</code>", both)
+    assert "ROUTE" not in routes({"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (68.9, 9)}, "<code>claude-opus-6</code>", both)
+    assert "ROUTE" not in routes({"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (69.4, 9)}, "<code>claude-opus-6</code>")
+
+
+def test_an_unbenched_challenger_must_be_no_dearer_per_token_and_claims_no_cost_per_task():
+    out = routes({"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (75, 5)}, "<code>claude-opus-6</code>", AUTO_ROUTE="1")
+    assert "(proposed). coding index 75 vs 70, $5/1M vs $10/1M per token, cost per task not measured" in out, out
+    assert "ROUTE" not in routes({"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (95, 11)}, "<code>claude-opus-6</code>")
+
+
+def test_cost_per_task_comes_from_bench_tokens():
+    # cheaper per token, but three times the tokens on our bench: costlier per task, so no change
+    tsv([("gpt-6-sol", "high", t, 100) for t in "12"] + [("claude-opus-6", "medium", t, 300) for t in "12"])
+    out = again({"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (75, 5)}, AUTO_ROUTE="1")
+    assert "ROUTE" not in out, out
+    tsv([("gpt-6-sol", "high", t, 100) for t in "12"] + [("claude-opus-6", "medium", t, 150) for t in "12"])
+    out = again({"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (75, 5)}, AUTO_ROUTE="1")
+    assert "-> claude-opus-6 medium (applied). coding index 75 vs 70, $0.0015/task vs $0.002/task" in out, out
+
+
+def test_each_row_is_judged_on_its_own_benchmark():
+    (skill / "ROUTING.md").write_text(TABLE + "| **Hard reasoning**: maths | 1. Sol | `codex` · `gpt-6-sol` | high |\n")
+    ev = lambda t, h, i: {"terminalbench_v4_0": t, "hle": h, "artificial_analysis_intelligence_index": i}  # noqa: E731
+    aa.write_text(json.dumps({"data": [
+        {"slug": "gpt-6-sol-high", "evaluations": ev(0.3, 0.5, 50), "pricing": {"price_1m_blended_3_to_1": 10}},
+        {"slug": "claude-opus-6-medium", "evaluations": ev(0.4, 0.6, 40), "pricing": {"price_1m_blended_3_to_1": 10}}]}))
+    shutil.rmtree(tmp / "state", ignore_errors=True)
+    page.write_text("<code>claude-opus-5-5</code><code>claude-opus-6</code>")
+    notes.write_text("")
+    watch("run", **KEY)
+    out = watch("routes")
+    assert "ROUTE Bulk code: gpt-6-sol high -> claude-opus-6 medium (proposed). Terminal-Bench v4 0.4 vs 0.3" in out, out
+    assert "ROUTE Hard reasoning: gpt-6-sol high -> claude-opus-6 medium (proposed). HLE 0.6 vs 0.5" in out, out
 
 
 def test_xhigh_max_and_uncatalogued_models_are_never_picked():
@@ -387,6 +421,8 @@ def test_without_a_key_benchlm_only_proposes():
     out = routes({}, "<code>claude-opus-6</code>", (("gpt-6-sol", "high"), ("claude-opus-6", "high")),
                  ARTIFICIAL_ANALYSIS_API_KEY="", AUTO_ROUTE="1")
     assert "-> claude-opus-6 high (proposed). coding 80" in out and "no price data" in out, out
+    out = routes({}, "<code>claude-opus-6</code>", ARTIFICIAL_ANALYSIS_API_KEY="")
+    assert "ROUTE" not in out, out  # no prices and no bench run: nothing to stand on
 
 
 def test_failed_snapshot_keeps_the_last_one_and_never_shows_the_key():
@@ -481,8 +517,8 @@ def test_applied_override_is_the_holder_and_its_bench_gate():
     out = again({"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (75, 10), "claude-opus-7-medium": (80, 10)},
                 AUTO_ROUTE="1")
     assert "-> claude-opus-6 medium (applied)" in out, out
-    assert "ROUTE Bulk code: claude-opus-6 medium -> claude-opus-7 medium (proposed)" in out, out
-    out = again({"gpt-6-sol-high": (76, 10), "claude-opus-6-medium": (75, 20)}, AUTO_ROUTE="1")
+    assert "claude-opus-7" not in out, out  # scores higher but costs more per task on our bench
+    out = again({"gpt-6-sol-high": (76, 10), "claude-opus-6-medium": (75, 25)}, AUTO_ROUTE="1")
     assert "override claude-opus-6 medium dropped; back to ROUTING.md (gpt-6-sol high)." in out, out
     assert "(applied)" not in out, out
 
@@ -508,11 +544,16 @@ def test_notices_are_capped_at_ten():
 
 def test_bench_gate_uses_the_holders_tasks_and_known_tokens():
     mw = mw_module()
-    tsv([("h", "high", "1", 100), ("c", "high", "1", 100), ("c", "high", "9", 999)])
-    assert mw.benched_against(mw.bench_rows(), ("c", "high"), ("h", "high"))
+    price = {"in": 10, "out": 10}
+    tsv([("h", "high", "1", 100), ("c", "high", "1", 50), ("c", "high", "9", 999)])
+    assert mw.bench_cost(mw.bench_rows(), ("c", "high"), ("h", "high"), price, price) == (0.0005, 0.001)
     tsv([("h", "high", "1", 100), ("c", "high", "1", "")])
-    assert mw.bench_rows()[("c", "high")]["1"][1] is None
-    assert not mw.benched_against(mw.bench_rows(), ("c", "high"), ("h", "high"))
+    assert mw.bench_cost(mw.bench_rows(), ("c", "high"), ("h", "high"), price, price) == (None, 0.001)
+    tsv([("h", "high", "1", 100), ("h", "high", "2", 100), ("c", "high", "1", 50)])
+    assert mw.bench_cost(mw.bench_rows(), ("c", "high"), ("h", "high"), price, price) is None
+    tsv([("h", "high", "1", 100)])
+    bench.write_text(bench.read_text() + "d\tc\tc\thigh\t1\tFAIL\t1\t50\t0\n")
+    assert mw.bench_cost(mw.bench_rows(), ("c", "high"), ("h", "high"), price, price) is False
 
 
 def test_non_numeric_scores_become_none():
