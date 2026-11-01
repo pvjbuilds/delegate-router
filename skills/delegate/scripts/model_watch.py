@@ -435,7 +435,7 @@ def judge(st, snap, cat):
         hi, hp = (scores[hs][field], scores[hs]["price"]) if hs else (None, None)
         if hi is None or (aa and hp is None):
             with open(STATE_DIR / "watch.log", "a") as log:
-                log.write("routes: no {} record for {}; row {} skipped\n".format(snap["source"], held, row))
+                log.write("routes: no {} {} score for {}; row {} skipped\n".format(snap["source"], field, held, row))
             continue
         best, tried = None, set()
         for m in sorted(names):
@@ -443,7 +443,7 @@ def judge(st, snap, cat):
                 slug, label = record(scores, m, e)
                 if slug == norm(m):  # no effort in the record: judged once, at the holder's effort
                     label = he
-                if not slug or (m, label) == (hm, he) or slug in tried:
+                if not slug or m == hm or slug in tried:  # price per token can't judge an effort change of the holder
                     continue
                 tried.add(slug)
                 ci, cp = scores[slug][field], scores[slug]["price"]

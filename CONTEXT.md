@@ -75,6 +75,9 @@ first for Bulk code. GPT-6 Astra low review, two rounds (12 then 8 findings); re
 with tests; round 2's three fixes not re-reviewed. Kept by design: falling back to the ROUTING.md
 default needs no bench; an installed but signed-out CLI still counts; an applied route's figures
 refresh only when it changes.
+2026-11-01: v1.3.1 released: first live AA run (719 records). The holder's own model at another
+effort is no longer a challenger. AA publishes no coding index today, so Bulk code and Trivial
+edits are skipped (logged) until it does; the reasoning rows are judged.
 Candidates for v1.4: opt-in auto-update (the background check runs `git pull --ff-only` on new
 tagged releases; off by default; needs a cross-provider review), a bench task for long agentic
 work, bench hardening (run model CLIs with integrations off, a stronger task 3, record CLI

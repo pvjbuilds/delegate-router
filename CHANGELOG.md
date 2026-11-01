@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.3.1 (2026-11-01)
+
+**Fixed**
+- The route check no longer proposes the holder's own model at a higher effort. AA's price per
+  token is the same at every effort, so such a change always looked free; it costs 2-3x per task.
+- `watch.log` says "no aa coding score" instead of "no aa record" when a model has a record but
+  no score on the row's index.
+
 ## v1.3.0 (2026-11-01)
 
 **Added**

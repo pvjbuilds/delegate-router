@@ -359,6 +359,12 @@ def test_unbenched_or_auto_off_is_only_proposed():
     assert "-> claude-opus-6 medium (proposed)" in out and "Bench it" not in out, out
 
 
+def test_the_holders_own_model_at_another_effort_is_never_a_challenger():
+    # price per token is the same at every effort, so an effort change can't be judged on it
+    out = routes({"gpt-6-sol-high": (70, 10), "gpt-6-sol-medium": (72, 10)}, bench_rows=(("gpt-6-sol", "high"), ("gpt-6-sol", "medium")), AUTO_ROUTE="1")
+    assert "ROUTE" not in out, out
+
+
 def test_tie_margin_is_one_percent():
     assert "(proposed)" in routes({"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (69.4, 9)}, "<code>claude-opus-6</code>")
     assert "ROUTE" not in routes({"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (68.9, 9)}, "<code>claude-opus-6</code>")
