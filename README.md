@@ -21,8 +21,13 @@ quota and context.
   never-delegate list (debugging, architecture, security code, anything under ~40 lines).
 - **The host always verifies.** A delegate's "done" isn't evidence: the host runs the check and
   reads the diff.
-- **An update path.** `model_watch.py` notices new model releases in your CLIs and the
-  vendors' release notes, and can update the CLI and prove the new model answers.
+- **Routes that keep up on their own.** Every 12 h, `model_watch.py` notices new models in
+  your CLIs and the vendors' release notes, re-checks the routes against a fresh benchmark
+  snapshot, and tells you when a route should change. A tracker rescaling its scores moves
+  nothing; a model that really beats the holder does.
+
+**New in v1.3:** routes re-check themselves ([how](#routes-that-keep-themselves-current)), and
+bulk code now goes to GPT-6.1 Terra first. See the [changelog](CHANGELOG.md).
 
 Interactive diagram: [docs/workflow.html](docs/workflow.html) (open it locally).
 
@@ -94,7 +99,7 @@ map ("send this to Gemini").
 
 | Task | First choice | Fallback |
 |---|---|---|
-| Bulk code from a spec | GPT-6.1 Sol (Codex) | Claude Opus 5.5 |
+| Bulk code from a spec | GPT-6.1 Terra (Codex) | GPT-6.1 Sol, then Claude Opus 5.5 |
 | Must be right, or the first pick failed | Claude Opus 5.5 | GPT-6.1 Sol |
 | Trivial mechanical edits | GPT-6 Luna (Codex) | Claude Opus 5.5 |
 | Images, screenshots, scanned pages | GPT-6.1 Terra (Codex) | Gemini 3.8 Flash |
@@ -111,7 +116,8 @@ beats them.
 git -C ~/.delegate-router pull
 ```
 
-That brings a newer routing map. Between releases, `model_watch.py` tells you what's new:
+That brings new rules, tasks and bench results. Between releases, `model_watch.py` tells you
+what's new, routes included:
 
 ```bash
 python3 ~/.delegate-router/skills/delegate/scripts/model_watch.py status
@@ -124,6 +130,25 @@ python3 ~/.delegate-router/skills/delegate/scripts/model_watch.py status
   models page) and five vendor release-note pages. It's capped at 10 names, and every step,
   CLI update and probe included, stops at 15 minutes.
 - `ack` marks everything current as reviewed.
+
+### Routes that keep themselves current
+
+The background check also re-checks five routes (Bulk code, Trivial edits, Must be right,
+Hard reasoning, Review) against a fresh benchmark snapshot. A model your CLIs list takes a
+route only if it beats the current holder on the same snapshot: a higher score for no more
+money, or a score within 1% for less money. Comparing within one snapshot means a tracker
+rescaling its scores never moves a route by itself.
+
+- **Proposed** (the default): `status` prints the change and the bench command to run.
+- **Applied**: with `AUTO_ROUTE=1`, and only once the challenger has matched or beaten the
+  holder on `bench/`, the route switches for your machine. ROUTING.md is never edited; the
+  figures stay in the state folder.
+- If a route's model drops out of your CLIs, the next candidate in that row moves up.
+
+The scores come from Artificial Analysis when `ARTIFICIAL_ANALYSIS_API_KEY` is set (environment,
+or the macOS keychain). The key is optional: without it, BenchLM's public data is used, which
+has no prices, so changes are only ever proposed. `routes` prints just these lines; `ack`
+clears proposals and notices.
 
 State lives in `~/.local/state/delegate-router/`, settings in
 `~/.config/delegate-router/config.env` (see [config.example.env](config.example.env)).
@@ -230,7 +255,13 @@ appends pass, seconds and tokens per task to `bench/results.tsv`. `--task 6` run
 proves the check fails on the untouched files and passes on that answer.
 
 Latest run (2026-10-27): GPT-6.1 Sol high and GPT-6.1 Terra medium both passed 10/10; Terra
-took 307 s to Sol's 467 s. The bench doesn't yet find where trackers put Sol ahead on coding.
+took 307 s to Sol's 467 s, on fewer tokens. Since 2026-11-01, Terra holds the bulk-code route
+and Sol is its fallback. The bench doesn't yet test the long agentic work where trackers put
+Sol ahead.
+
+On your machine, `bench/results.tsv` is also the gate for routes that keep themselves current:
+with `AUTO_ROUTE=1`, a challenger switches a route only after its rows here match or beat the
+holder's.
 
 ## Tests
 
@@ -255,8 +286,8 @@ change.
 Delegation needs a second model.
 
 **Will it spend my money?** Only through subscriptions you already have, when you delegate.
-Background checks read public pages and your CLIs' model lists. Probes and Jev run only if you
-turn them on.
+Background checks read public pages, your CLIs' model lists and, if you add a free key,
+Artificial Analysis's data API. Probes and Jev run only if you turn them on.
 
 ## Keywords
 
@@ -265,7 +296,7 @@ router · model routing · multi-model routing · multi-model · multi-LLM · cr
 Claude Code skill · Claude Code skills · Codex CLI skill · Codex skills · Agent Skills · SKILL.md ·
 Claude Code subagent · subagent · coding agent · AI coding agent · agentic coding · multi-agent ·
 save tokens · token optimization · reduce AI coding cost · cost per task · subscription quota ·
-model release watcher · new model alerts · OpenAI Codex · Google Gemini · Anthropic Claude ·
+model release watcher · new model alerts · benchmark-driven routing · self-updating routes · OpenAI Codex · Google Gemini · Anthropic Claude ·
 Antigravity CLI · agy · Claude Opus 5.5 · GPT-6.1 Sol · GPT-6.1 Terra · GPT-6 Luna · GPT-6 Astra ·
 Gemini 3.8 Flash · TypeSafe Jev · model benchmark · LLM eval
 

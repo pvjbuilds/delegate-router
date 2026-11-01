@@ -46,6 +46,10 @@ another model the user already pays for, picked from `skills/delegate/ROUTING.md
 - 2026-10-27: One installed copy. Anything only one user wants (paths, effort limits, data
   gates, figures) lives in their `LOCAL.md`, never in the repo; it wins over SKILL.md and
   ROUTING.md. The installer never creates or edits it.
+- 2026-11-01: Routes are re-checked by the 12 h check. A challenger must dominate the holder
+  within one snapshot; tie margin 1% (the maintainer's choice). Figures stay in state, never in
+  the repo. The Artificial Analysis key is optional; the BenchLM fallback only proposes.
+  `AUTO_ROUTE` defaults to 0.
 - 2026-09-30: The installer prints the Codex `network_access` and SessionStart hook snippets
   instead of editing user settings.
 - Verified live 2026-09-30: `agy -p --model <slug> --sandbox` and the `claude -p
@@ -63,10 +67,15 @@ permissions; `agy` has no integrations switch; Codex plugins and admin config st
 `*_BIN` is watcher-only; `status` may start the 12 h check.
 2026-10-27: v1.1.0 prepared: `bench/` (10 tasks with `--selfcheck`), an image route
 (GPT-6.1 Terra), Claude Haiku 5.5 listed as not routed, the bench rule in ROUTING.md.
-2026-10-27: v1.2.0 prepared: one installed copy. The maintainer's `~/.claude/skills/delegate`
+2026-10-27: v1.2.0 released (tagged 2026-11-01): one installed copy. The maintainer's `~/.claude/skills/delegate`
 links to this repo; a user's own rules go in `~/.config/delegate-router/LOCAL.md`, which the
 skill reads first and which wins; `uninstall.sh --purge` keeps it.
-Candidates for v1.3: opt-in auto-update (the background check runs `git pull --ff-only` on new
+2026-11-01: v1.3.0 released: route re-check (`AUTO_ROUTE`, `routes`), Terra
+first for Bulk code. GPT-6 Astra low review, two rounds (12 then 8 findings); real ones fixed
+with tests; round 2's three fixes not re-reviewed. Kept by design: falling back to the ROUTING.md
+default needs no bench; an installed but signed-out CLI still counts; an applied route's figures
+refresh only when it changes.
+Candidates for v1.4: opt-in auto-update (the background check runs `git pull --ff-only` on new
 tagged releases; off by default; needs a cross-provider review), a bench task for long agentic
 work, bench hardening (run model CLIs with integrations off, a stronger task 3, record CLI
 timeouts apart from check failures), keep custom Codex providers in delegate calls (`--ignore-user-config` drops them today),

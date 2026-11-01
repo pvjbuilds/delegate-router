@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.3.0 (2026-11-01)
+
+**Added**
+- Routes that keep themselves current: the 12 h check re-checks the Default route rows against
+  a fresh benchmark snapshot (Artificial Analysis with an optional key, else BenchLM) and
+  alerts when a model your CLIs list beats a holder. `AUTO_ROUTE=1` applies benched changes;
+  `model_watch.py routes` prints only the route lines. README: "Routes that keep themselves
+  current".
+- Bulk code now routes to GPT-6.1 Terra at medium first, GPT-6.1 Sol at high second.
+
 ## v1.2.0 (2026-10-27)
 
 **Added**

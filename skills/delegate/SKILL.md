@@ -55,6 +55,8 @@ code.* Say so in one line and move on.
    `python3 <this skill's folder>/scripts/model_watch.py status`
    It prints the delegate CLIs on this machine, and any new model release it found. If it
    reports something new, tell the user once in one line, then carry on with the current map.
+   A line starting `delegate-router: ROUTE ... (applied)` replaces that ROUTING.md row's first
+   candidate for this run; `(proposed)` lines are reported to the user, not acted on.
 2. **The user named a model?** Use it. Done.
 3. **Otherwise read [ROUTING.md](ROUTING.md)** (same folder) and take the row that matches the
    task. Walk its candidates in order and take the first one that is **installed** and is

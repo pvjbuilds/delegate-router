@@ -1,6 +1,6 @@
 # Routing map: which model gets which task
 
-Snapshot: 2026-10-27
+Snapshot: 2026-11-01
 
 The delegate skill reads this file to pick a model. Benchmarks are a prior, not proof: **a
 check run on the actual task beats any benchmark.** Neutral benchmarks pick a new model's
@@ -30,7 +30,7 @@ If nothing in a row qualifies, the host does the work itself.
 
 | Task | Candidates, in order | CLI and model ID | Effort |
 |---|---|---|---|
-| **Bulk code** from a written spec: new module, boilerplate, test stubs, many-file mechanical edits | 1. GPT-6.1 Sol<br>2. Claude Opus 5.5 | `codex` · `gpt-6.1-sol`<br>`opus-implementer` · `claude-opus-5-5` | high<br>medium |
+| **Bulk code** from a written spec: new module, boilerplate, test stubs, many-file mechanical edits | 1. GPT-6.1 Terra<br>2. GPT-6.1 Sol<br>3. Claude Opus 5.5 | `codex` · `gpt-6.1-terra`<br>`codex` · `gpt-6.1-sol`<br>`opus-implementer` · `claude-opus-5-5` | medium<br>high<br>medium |
 | **Must be right**: correctness matters more than quota, terminal-heavy agent work, or a spec the first pick already failed | 1. Claude Opus 5.5<br>2. GPT-6.1 Sol | `opus-implementer` · `claude-opus-5-5`<br>`codex` · `gpt-6.1-sol` | medium<br>high |
 | **Trivial edits**: reformatting, renames, mechanical find-and-replace | 1. GPT-6 Luna<br>2. Claude Opus 5.5 | `codex` · `gpt-6-luna`<br>`opus-implementer` · `claude-opus-5-5` | medium<br>medium |
 | **Images**: screenshots, scanned pages, charts (image files) | 1. GPT-6.1 Terra<br>2. Gemini 3.8 Flash | `codex exec -i <file>` · `gpt-6.1-terra`<br>`agy` · `gemini-3.8-flash-high` | medium<br>(in the ID) |
@@ -47,10 +47,13 @@ missing, never quietly drop it.
 
 In our own words; the numbers live on the trackers linked at the bottom.
 
-- **GPT-6.1 Sol** is the default typist. On independent intelligence indexes it lands close to
-  Opus at medium effort for a fraction of the cost per task, and it runs on the Codex plan's
-  separate quota. Good enough for fully specified packets. After a failed run, escalate to
-  Opus rather than retrying Sol.
+- **GPT-6.1 Terra** is the default typist since 2026-11-01, the maintainer's pick to spend
+  fewer tokens. On our bench (`bench/`) it passed 10/10 on 2026-10-27, as GPT-6.1 Sol high did,
+  on fewer tokens. It runs on the Codex plan's separate quota. After a failed run, escalate to
+  GPT-6.1 Sol, then Opus, rather than retrying Terra.
+- **GPT-6.1 Sol** is the second typist. On independent intelligence indexes it lands close to
+  Opus at medium effort for a fraction of the cost per task. On terminal and agentic coding
+  trackers it leads Terra clearly, so it takes over when Terra fails a packet.
 - **Claude Opus 5.5 at medium effort** is the must-be-right choice and the fallback for
   everything. It leads on agentic tool use and production software engineering. Medium is its
   knee: each step up costs much more per point gained.
@@ -60,11 +63,8 @@ In our own words; the numbers live on the trackers linked at the bottom.
   security work. It is slow and expensive, so it gets hard problems and reviews, not bulk typing.
 - **Gemini 3.8 Flash** is fast and cheap, and strong at video and other media. It is weak at
   multi-step agent work, so it runs in plan mode and only its text output is used.
-- **GPT-6.1 Terra** reads images. Independent multimodal scores put it at or near the top of
-  the field, it is cheap per task, and it runs on Codex quota. On terminal and agentic coding
-  trackers it trails GPT-6.1 Sol clearly. Our bench (`bench/`) doesn't show that gap yet: both
-  passed 10/10 on 2026-10-27, Terra on fewer tokens. Code stays with Sol until the bench tests
-  the long agentic work where the trackers see the gap.
+- **GPT-6.1 Terra** also reads images. Independent multimodal scores put it at or near the top
+  of the field, and it is cheap per task.
   `codex exec -i` takes image files only, so PDF, video and audio stay with Gemini.
 - **GPT-6 Luna** is very cheap and fast but clearly weaker. Mechanical edits only.
 - **Not routed:** Claude Haiku 5.5 (`claude-haiku-5-5`; the strongest small model, but very

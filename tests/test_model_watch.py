@@ -24,6 +24,9 @@ for d in (bindir, cask):
 calls = tmp / "calls.log"
 notes = tmp / "notes.html"
 page = tmp / "models.html"
+aa = tmp / "aa.json"
+benchlm = tmp / "benchlm.json"
+bench = tmp / "results.tsv"
 
 
 def stub(path, body):
@@ -55,7 +58,9 @@ i=0; while read -r l; do echo "{{\\"i\\": $i, \\"new_model\\": ${{JEV_SCORE:-0.9
 BASE = {**os.environ, "PATH": f"{bindir}:/usr/bin:/bin", "DELEGATE_ROUTER_STATE": str(tmp / "state"),
         "DELEGATE_ROUTER_CONFIG": str(tmp / "config.env"), "DELEGATE_ROUTER_NOTES": notes.as_uri(),
         "DELEGATE_ROUTER_CLAUDE_URL": page.as_uri(), "DELEGATE_ROUTER_JEV": JEV,
-        "CODEX_BIN": CODEX, "AGY_BIN": AGY, "CLAUDE_BIN": CLAUDE, "BACKGROUND": "0"}
+        "CODEX_BIN": CODEX, "AGY_BIN": AGY, "CLAUDE_BIN": CLAUDE, "BACKGROUND": "0",
+        "ARTIFICIAL_ANALYSIS_API_KEY": "", "DELEGATE_ROUTER_AA_URL": aa.as_uri(),
+        "DELEGATE_ROUTER_BENCHLM_URL": benchlm.as_uri(), "DELEGATE_ROUTER_BENCH": str(bench)}
 ON = {"JEV": "1", "AUTO_UPDATE_CLI": "1"}
 
 
@@ -290,6 +295,310 @@ def test_config_file_is_read_and_env_wins():
         assert calls.read_text().count("jev") == 1
     finally:
         (tmp / "config.env").unlink()
+
+
+# --- routes: ROUTING.md rows re-checked against a benchmark snapshot ---
+TABLE = """Snapshot: 2099-01-01
+| Task | Candidates | CLI and model ID | Effort |
+|---|---|---|---|
+| **Bulk code** from a spec | 1. Sol<br>2. Opus | `codex` · `gpt-6-sol`<br>`opus-implementer` · `claude-opus-5-5` | high<br>medium |
+| **Images**: files | 1. Flash | `agy` · `gemini-3.8-flash-high` | (in the ID) |
+"""
+KEY = {"ARTIFICIAL_ANALYSIS_API_KEY": "SECRET"}
+
+
+def scores(rows, x=1.0):
+    """rows: slug -> (coding, price). Intelligence index is fixed so only coding decides."""
+    aa.write_text(json.dumps({"data": [{"slug": s, "evaluations": {"artificial_analysis_coding_index": c * x,
+                  "artificial_analysis_intelligence_index": 50 * x}, "pricing": {"price_1m_blended_3_to_1": p}}
+                  for s, (c, p) in rows.items()]}))
+
+
+def benched(*models):
+    bench.write_text("date\tcli\tmodel\teffort\ttask\tresult\tseconds\tinput_tokens\toutput_tokens\n" + "".join(
+        "2026-11-01\tcodex\t{}\t{}\t{}\tPASS\t1\t100\t1\n".format(m, e, t) for m, e in models for t in ("1", "2")))
+
+
+def routes(rows, page_models="", bench_rows=(("gpt-6-sol", "high"),), **env):
+    bench.unlink(missing_ok=True)
+    if bench_rows:
+        benched(*bench_rows)
+    scores(rows)
+    page_text = "<code>claude-opus-5-5</code>" + page_models
+    shutil.rmtree(tmp / "state", ignore_errors=True)
+    (skill / "ROUTING.md").write_text(TABLE)
+    page.write_text(page_text)
+    notes.write_text("")
+    watch("run", **{**KEY, **env})
+    return watch("routes", **env)
+
+
+def test_rescale_alone_changes_no_route():
+    rows = {"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (69, 20)}
+    out = routes(rows, "<code>claude-opus-6</code>")
+    assert "ROUTE" not in out, out
+    scores(rows, 0.8)
+    watch("run", **KEY)
+    out = watch("status")
+    assert "ROUTE" not in out and out.count("scores rescaled (median x0.8") == 1, out
+    assert "0 change(s)" in out, out
+
+
+def test_dominating_benched_model_is_applied():
+    out = routes({"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (75, 10)}, "<code>claude-opus-6</code>",
+                 (("gpt-6-sol", "high"), ("claude-opus-6", "medium")), AUTO_ROUTE="1")
+    assert "ROUTE Bulk code: gpt-6-sol high -> claude-opus-6 medium (applied). coding index 75" in out, out
+    assert "$10" in out, out
+
+
+def test_unbenched_or_auto_off_is_only_proposed():
+    rows = {"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (75, 10)}
+    out = routes(rows, "<code>claude-opus-6</code>", AUTO_ROUTE="1")
+    assert "-> claude-opus-6 medium (proposed)" in out and "Bench it: python3 bench/bench.py claude claude-opus-6 medium" in out, out
+    out = routes(rows, "<code>claude-opus-6</code>", (("gpt-6-sol", "high"), ("claude-opus-6", "medium")))
+    assert "-> claude-opus-6 medium (proposed)" in out and "Bench it" not in out, out
+
+
+def test_tie_margin_is_one_percent():
+    assert "(proposed)" in routes({"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (69.4, 9)}, "<code>claude-opus-6</code>")
+    assert "ROUTE" not in routes({"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (68.9, 9)}, "<code>claude-opus-6</code>")
+
+
+def test_xhigh_max_and_uncatalogued_models_are_never_picked():
+    out = routes({"gpt-6-sol-high": (70, 10), "claude-opus-6-xhigh": (90, 1), "claude-opus-6-max": (95, 1),
+                  "gpt-9-nova-high": (99, 1)}, "<code>claude-opus-6</code>")
+    assert "ROUTE" not in out, out
+
+
+def test_holder_gone_from_catalogs_moves_the_next_candidate_up():
+    out = routes({"gpt-6-sol-high": (70, 10)}, CODEX_BIN=stub(bindir / "codex2", 'echo \'{"models":[]}\'\n'))
+    assert "ROUTE Bulk code: gpt-6-sol high -> claude-opus-5-5 medium (applied)" in out, out
+
+
+def test_without_a_key_benchlm_only_proposes():
+    benchlm.write_text(json.dumps({"items": [{"slug": "gpt-6-sol", "scores": {"displayCategoryScores": {"coding": 70}}},
+                                             {"slug": "claude-opus-6", "scores": {"displayCategoryScores": {"coding": 80}}}]}))
+    out = routes({}, "<code>claude-opus-6</code>", (("gpt-6-sol", "high"), ("claude-opus-6", "high")),
+                 ARTIFICIAL_ANALYSIS_API_KEY="", AUTO_ROUTE="1")
+    assert "-> claude-opus-6 high (proposed). coding 80" in out and "no price data" in out, out
+
+
+def test_failed_snapshot_keeps_the_last_one_and_never_shows_the_key():
+    routes({"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (75, 10)}, "<code>claude-opus-6</code>")
+    before = json.loads((tmp / "state/state.json").read_text())["snapshot"]
+    aa.write_text("not json")
+    out = watch("run", **KEY) + watch("status", **KEY)
+    out += watch("run", DELEGATE_ROUTER_AA_URL=(tmp / "missing.json").as_uri(), **KEY)
+    assert json.loads((tmp / "state/state.json").read_text())["snapshot"] == before
+    assert out.count("ROUTE") == 1 and "SECRET" not in out, out
+    log = tmp / "state/watch.log"
+    assert "SECRET" not in (log.read_text() if log.exists() else "")
+
+
+def test_routes_prints_only_route_lines_offline():
+    out = routes({"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (75, 10)}, "<code>claude-opus-6</code>")
+    calls.unlink(missing_ok=True)
+    assert all(line.startswith("delegate-router: ROUTE") for line in out.splitlines()) and out, out
+    assert "installed CLIs" not in watch("routes") and not calls.exists()
+    watch("ack")
+    assert "ROUTE" not in watch("routes")
+
+
+def test_routing_md_is_never_written():
+    routes({"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (75, 10)}, "<code>claude-opus-6</code>",
+           (("gpt-6-sol", "high"), ("claude-opus-6", "medium")), AUTO_ROUTE="1")
+    assert (skill / "ROUTING.md").read_text() == TABLE
+
+
+def tsv(rows):
+    """rows: (model, effort, task, tokens) -> results.tsv, every task PASS."""
+    bench.write_text("date\tcli\tmodel\teffort\ttask\tresult\tseconds\tinput_tokens\toutput_tokens\n" + "".join(
+        "d\tc\t{}\t{}\t{}\tPASS\t1\t{}\t{}\n".format(m, e, t, k, "" if k == "" else 0) for m, e, t, k in rows))
+
+
+def mw_module():
+    sys.path.insert(0, str(SCRIPT.parent))
+    import model_watch as mw
+    mw.BENCH = bench
+    return mw
+
+
+def again(rows, **env):
+    scores(rows)
+    watch("run", **{**KEY, **env})
+    return watch("routes", **env)
+
+
+def test_aa_key_is_never_sent_over_http_or_through_a_redirect():
+    import http.server
+    import threading
+    seen = []
+
+    class H(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            seen.append((self.path, self.headers.get("x-api-key")))
+            if self.path == "/hop":
+                self.send_response(302)
+                self.send_header("Location", "/target")
+                self.end_headers()
+            else:
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'{"data": []}')
+
+        def log_message(self, *a):
+            pass
+    srv = http.server.HTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    base = "http://127.0.0.1:{}".format(srv.server_port)
+    mw = mw_module()
+    try:
+        mw.fetch(base + "/hop", {"x-api-key": "k"}, redirects=False)
+    except Exception:
+        pass
+    assert [p for p, _ in seen] == ["/hop"], seen  # the redirect was not followed
+    seen.clear()
+    routes({"gpt-6-sol-high": (70, 10)}, DELEGATE_ROUTER_AA_URL=base + "/hop")
+    assert all(k is None for _, k in seen), seen
+    srv.shutdown()
+
+
+def test_applied_override_is_the_holder_and_its_bench_gate():
+    tsv([("gpt-6-sol", "high", t, 101) for t in "12"] + [("claude-opus-6", "medium", t, 50) for t in "12"]
+        + [("claude-opus-7", "medium", t, 80) for t in "12"])
+    scores({"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (75, 10)})
+    shutil.rmtree(tmp / "state", ignore_errors=True)
+    (skill / "ROUTING.md").write_text(TABLE)
+    page.write_text("<code>claude-opus-5-5</code><code>claude-opus-6</code><code>claude-opus-7</code>")
+    notes.write_text("")
+    watch("run", AUTO_ROUTE="1", **KEY)
+    out = again({"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (75, 10), "claude-opus-7-medium": (80, 10)},
+                AUTO_ROUTE="1")
+    assert "-> claude-opus-6 medium (applied)" in out, out
+    assert "ROUTE Bulk code: claude-opus-6 medium -> claude-opus-7 medium (proposed)" in out, out
+    out = again({"gpt-6-sol-high": (76, 10), "claude-opus-6-medium": (75, 20)}, AUTO_ROUTE="1")
+    assert "override claude-opus-6 medium dropped; back to ROUTING.md (gpt-6-sol high)." in out, out
+    assert "(applied)" not in out, out
+
+
+def test_table_skips_unsafe_candidates():
+    (skill / "ROUTING.md").write_text(TABLE.replace("`codex` · `gpt-6-sol`", "`bash` · `gpt-6-sol`")
+                                      .replace("high<br>medium", "xhigh<br>medium"))
+    assert mw_module().table() == {"Bulk code": [("claude-opus-5-5", "medium", "opus-implementer")]}
+    (skill / "ROUTING.md").write_text(TABLE.replace("`gpt-6-sol`", "`rm -rf ~`"))
+    assert mw_module().table()["Bulk code"][0][0] == "claude-opus-5-5"
+
+
+def test_notices_are_capped_at_ten():
+    routes({"gpt-6-sol-high": (70, 10)})
+    st = json.loads((tmp / "state/state.json").read_text())
+    st["notices"] = ["n{}".format(i) for i in range(12)]
+    st["routes"] = {"Bulk code": {"model": "claude-opus-6", "effort": "medium", "cli": "claude", "index": "x",
+                                  "source": "aa", "was": "gpt-6-sol high", "at": "d"}}
+    (tmp / "state/state.json").write_text(json.dumps(st))
+    watch("run", **KEY)
+    assert len(json.loads((tmp / "state/state.json").read_text())["notices"]) == 10
+
+
+def test_bench_gate_uses_the_holders_tasks_and_known_tokens():
+    mw = mw_module()
+    tsv([("h", "high", "1", 100), ("c", "high", "1", 100), ("c", "high", "9", 999)])
+    assert mw.benched_against(mw.bench_rows(), ("c", "high"), ("h", "high"))
+    tsv([("h", "high", "1", 100), ("c", "high", "1", "")])
+    assert mw.bench_rows()[("c", "high")]["1"][1] is None
+    assert not mw.benched_against(mw.bench_rows(), ("c", "high"), ("h", "high"))
+
+
+def test_non_numeric_scores_become_none():
+    aa.write_text(json.dumps({"data": [{"slug": "gpt-6-sol-high", "artificial_analysis_coding_index": "75",
+                                        "pricing": {"price_1m_blended_3_to_1": True}}]}))
+    shutil.rmtree(tmp / "state", ignore_errors=True)
+    (skill / "ROUTING.md").write_text(TABLE)
+    watch("run", **KEY)
+    s = json.loads((tmp / "state/state.json").read_text())["snapshot"]["scores"]["gpt-6-sol-high"]
+    assert s["coding"] is None and s["price"] is None, s
+
+
+def test_odd_state_never_crashes_status():
+    fresh()
+    st = json.loads((tmp / "state/state.json").read_text())
+    st.update(routes=None, proposals={"Bulk code": None, "Review": {"model": "x"}}, notices=None)
+    (tmp / "state/state.json").write_text(json.dumps(st))
+    watch("status")
+    st.update(routes={"Bulk code": 3}, notices=[None])
+    (tmp / "state/state.json").write_text(json.dumps(st))
+    watch("routes")
+
+
+def test_bare_record_is_ignored_when_effort_records_exist():
+    mw = mw_module()
+    assert mw.record({"m-high": {}, "m": {}}, "m", "low")[0] is None
+    assert mw.record({"m": {}}, "m", "low")[0] == "m"
+
+
+def test_failed_fetch_still_fails_over_on_the_last_snapshot():
+    routes({"gpt-6-sol-high": (70, 10)})
+    aa.write_text("not json")
+    empty = stub(bindir / "codex2", 'echo \'{"models":[]}\'\n')
+    watch("run", CODEX_BIN=empty, **KEY)
+    assert "-> claude-opus-5-5 medium (applied)" in watch("routes")
+
+
+def test_web_catalog_without_its_cli_does_not_count():
+    out = routes({"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (75, 10)}, "<code>claude-opus-6</code>",
+                 CLAUDE_BIN=str(tmp / "no-claude"))
+    assert "ROUTE" not in out, out
+
+
+def test_same_winner_refreshes_its_entry():
+    rows = {"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (75, 10)}
+    assert "Bench it" in routes(rows, "<code>claude-opus-6</code>")
+    watch("ack")
+    assert "ROUTE" not in again({**rows, "claude-opus-6-medium": (76, 10)})  # same proposal: stays acked
+    benched(("gpt-6-sol", "high"), ("claude-opus-6", "medium"))
+    st = json.loads((tmp / "state/state.json").read_text())
+    st["proposals"]["Bulk code"]["acked"] = False
+    (tmp / "state/state.json").write_text(json.dumps(st))
+    out = again(rows)
+    assert "(proposed)" in out and "Bench it" not in out and "coding index 75 " in out, out
+
+
+def test_a_stale_snapshot_never_applies_a_benchmark_change():
+    rows = {"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (75, 10)}
+    assert "(proposed)" in routes(rows, "<code>claude-opus-6</code>", AUTO_ROUTE="1")
+    benched(("gpt-6-sol", "high"), ("claude-opus-6", "medium"))
+    aa.write_text("not json")
+    watch("run", AUTO_ROUTE="1", **KEY)
+    assert "(applied)" not in watch("routes"), "a failed fetch judged on old scores"
+
+
+def test_failover_needs_no_snapshot_at_all():
+    shutil.rmtree(tmp / "state", ignore_errors=True)
+    (skill / "ROUTING.md").write_text(TABLE)
+    page.write_text("<code>claude-opus-5-5</code>")
+    notes.write_text("")
+    aa.write_text("not json")
+    empty = stub(bindir / "codex2", 'echo \'{"models":[]}\'\n')
+    watch("run", CODEX_BIN=empty, **KEY)
+    assert "-> claude-opus-5-5 medium (applied)" in watch("routes")
+
+
+def test_a_reapplied_route_clears_its_old_drop_notice():
+    page_models = "<code>claude-opus-6</code>"
+    win, lose = {"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (75, 10)}, {"gpt-6-sol-high": (76, 10), "claude-opus-6-medium": (75, 20)}
+    routes(win, page_models, bench_rows=(("gpt-6-sol", "high"), ("claude-opus-6", "medium")), AUTO_ROUTE="1")
+    assert "dropped" in again(lose, AUTO_ROUTE="1")
+    out = again(win, AUTO_ROUTE="1")
+    assert "-> claude-opus-6 medium (applied)" in out and "dropped" not in out, out
+
+
+def test_an_acked_proposal_returns_once_it_is_benched():
+    rows = {"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (75, 10)}
+    assert "Bench it" in routes(rows, "<code>claude-opus-6</code>")
+    watch("ack")
+    benched(("gpt-6-sol", "high"), ("claude-opus-6", "medium"))
+    out = again(rows)
+    assert "(proposed)" in out and "Bench it" not in out, out
 
 
 if __name__ == "__main__":
