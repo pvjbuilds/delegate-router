@@ -109,6 +109,12 @@ mutation-checked 2/2); README now leads with Jev. Live: 763 AA records. Known li
 Review is judged; a free per-row fallback is a v1.5 candidate. The model list for proposals
 comes from Anthropic's public models page, so a model the user can't use (Fable 5.2) can be
 proposed. `skills/delegate/SKILL.md` has an uncommitted, maintainer-only edit that must not ship.
+2026-11-20: routes refreshed for GPT-6.2 (commit cacd50c, local, not pushed): GPT-6.2 Astra low takes
+Hard reasoning and Review (bench tasks 6, 9: $3.00 vs $3.50); GPT-6.2 Sol high passed 6, 9, 10 on ~2x
+GPT-6.1 Sol's tokens, so it is not routed. The live check then proposes Review -> GPT-6.2 Sol high
+(index 54.9 vs 45.7, cheaper on the code bench), which `AUTO_ROUTE=1` applies; the bench has no review
+task, so Review cost is measured on code tasks. The "$x/task" figure is the total over the holder's
+bench tasks, not a per-task mean (wording fix for v1.5).
 Candidates for v1.5: opt-in auto-update (the background check runs `git pull --ff-only` on new
 tagged releases; off by default; needs a cross-provider review), a bench task for long agentic
 work, bench hardening (run model CLIs with integrations off, a stronger task 3, record CLI
