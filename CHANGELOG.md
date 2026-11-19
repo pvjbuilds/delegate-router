@@ -1,5 +1,27 @@
 # Changelog
 
+## v1.4.2 (2026-11-20)
+
+**Fixed**
+- Artificial Analysis retired `/api/v2/data/llms/models` on 2026-11-04 (HTTP 410). The route check
+  now reads the replacement, `/api/v2/language/models/free`, page by page. Its blended price is
+  worked out from the input and output prices (3:1), as AA blends it.
+- A failed score fetch is no longer silent: `routes` and `status` show
+  `scores: <source> failed (<error>); routes not re-checked; last good scores from <date>`
+  (or `no good scores yet`) until a fetch works. A crashed route check says so too.
+- A row whose holder has no score drops its old proposal and is named in
+  `scores: rows not judged, ...`; a catalog failover, or the default coming back, drops a
+  proposal judged against the holder that left.
+- Without an AA key, a second BenchLM run no longer fails the rescale check.
+
+**Docs**
+- README: what Jev does and what it costs, up front; your own agent keeps the routes current.
+
+**Known limit**
+- AA's free tier carries no Terminal-Bench or HLE scores, and no coding index for most models,
+  so Bulk code, Trivial edits, Must be right and Hard reasoning are skipped and named in a
+  `scores: rows not judged` line; only Review is judged today.
+
 ## v1.4.1 (2026-11-01)
 
 **Docs**

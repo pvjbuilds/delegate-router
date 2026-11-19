@@ -61,6 +61,9 @@ another model the user already pays for, picked from `skills/delegate/ROUTING.md
 - 2026-11-01: Another subscription first (maintainer, public repo): a row's first installed
   candidate on a plan other than the host's wins; the host's plan only when none is installed.
   Must be right and Trivial edits keep plain order. The maintainer's own `LOCAL.md` turns it off.
+- 2026-11-19 (maintainer): no paid score source, ever. The repo is for anyone on the internet and the
+  maintainer does not keep routes current for them; it is a framework in which each user's own agent
+  re-checks routes when a lab releases models. AA Pro is out; free-tier gaps get a free fallback.
 - 2026-09-30: The installer prints the Codex `network_access` and SessionStart hook snippets
   instead of editing user settings.
 - Verified live 2026-09-30: `agy -p --model <slug> --sandbox` and the `claude -p
@@ -97,6 +100,15 @@ Trivial edits), nothing applied.
 playwright crops of the light/dark views), README FAQ as headings, install-with-an-agent prompt,
 GitHub release pages for v1.2.0-v1.4.1, new description, social preview uploaded (Praj). Public-repo
 checklist (search and agents): vault RULES §11.
+2026-11-20: v1.4.2 released (maintainer's go 2026-11-19): score-source fix.
+AA retired `/api/v2/data/llms/models` (410) on 2026-11-04 and `snapshot()` swallowed it, so the
+route check judged nothing for two weeks without a word. Now: AA `/api/v2/language/models/free`,
+paged; every failure is a `scores:` notice that `ack` keeps. GPT-6.2 Astra medium review, four
+rounds (7, 4, 5, 2 findings; all real ones fixed with tests; round 4's two fixes not re-reviewed,
+mutation-checked 2/2); README now leads with Jev. Live: 763 AA records. Known limit: AA's free tier has no Terminal-Bench, HLE or (mostly) coding index, so only
+Review is judged; a free per-row fallback is a v1.5 candidate. The model list for proposals
+comes from Anthropic's public models page, so a model the user can't use (Fable 5.2) can be
+proposed. `skills/delegate/SKILL.md` has an uncommitted, maintainer-only edit that must not ship.
 Candidates for v1.5: opt-in auto-update (the background check runs `git pull --ff-only` on new
 tagged releases; off by default; needs a cross-provider review), a bench task for long agentic
 work, bench hardening (run model CLIs with integrations off, a stronger task 3, record CLI

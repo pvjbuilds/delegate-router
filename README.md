@@ -13,6 +13,13 @@ already pay for: **Codex** (GPT models), **Gemini** through the Antigravity `agy
 **Claude Opus** subagent. The host keeps the design and the verification, and saves its own
 quota and context.
 
+- **Jev picks what's worth reading, for $0.0001 a call.** With [Jev](#jev-optional-judgement-for-a-hundredth-of-a-cent)
+  on, a typed judgement model ranks the files a task needs before the spec is written, so
+  the host reads 5 files instead of 40, and it sorts real subscriber releases from API-only
+  and preview names in the vendors' release notes.
+- **Your agent keeps it current, not a vendor.** No hosted service, no paid API, no account
+  with us. When a lab ships a model, your own agent notices it, scores it on free public
+  benchmarks and your own bench, and tells you whether it should take over a route.
 - **Routing by task, not by habit.** [ROUTING.md](skills/delegate/ROUTING.md) maps each kind of
   task to an ordered list of models, chosen from independent benchmarks and cost per task.
   It skips any CLI you don't have, never routes back to the host's own model (except an
@@ -27,7 +34,11 @@ quota and context.
   snapshot, and tells you when a route should change. A tracker rescaling its scores moves
   nothing; a model that really beats the holder does.
 
-**New in v1.4:** work goes to a model on another of your subscriptions first, so your main
+**New in v1.4.2:** the route check reads Artificial Analysis's new free endpoint, and it can no
+longer fail quietly: a score source that is down, a catalogue cut short or a route it couldn't
+judge shows up as a `scores:` line in `status` until it's fixed.
+
+**v1.4:** work goes to a model on another of your subscriptions first, so your main
 agent's quota isn't spent twice ([how](#which-model-does-it-pick-when-my-main-agent-is-codex)).
 Each route is judged on its own benchmark, and a route switches only on a cost per task measured
 on our bench ([how](#routes-that-keep-themselves-current)). See the [changelog](CHANGELOG.md).
@@ -65,7 +76,7 @@ default; `--yes` takes every default. Re-running it keeps your earlier answers.
 | Install for Codex CLI? | yes, if found | Links `~/.agents/skills/delegate`; no removes that link |
 | Background checks for new models? | yes | At most every 12 h, only when the skill runs. No daemon, no cron. |
 | Update the CLI and probe a new model? | no | Updates through the channel the CLI came from (Homebrew cask, npm, or its own updater), then sends a one-word, read-only probe |
-| Turn on Jev? | no | See [Jev](#jev-optional) |
+| Turn on Jev? | no | See [Jev](#jev-optional-judgement-for-a-hundredth-of-a-cent) |
 
 If `claude` is installed, the installer also links the `opus-implementer` agent into
 `~/.claude/agents`: both hosts use it to reach Claude Opus.
@@ -176,9 +187,11 @@ each model spent on our `bench/` tasks, at its input and output prices.
 - If a route's model drops out of your CLIs, the next candidate in that row moves up.
 
 The scores come from Artificial Analysis when `ARTIFICIAL_ANALYSIS_API_KEY` is set (environment,
-or the macOS keychain). The key is optional: without it, BenchLM's public data is used. It has
+or the macOS keychain; a free key reads AA's free tier, which today scores only the Review row).
+The key is optional: without it, BenchLM's public data is used. It has
 no prices, so it only proposes models your bench already passed. `routes` prints just these
-lines; `ack` clears proposals and notices.
+lines; `ack` clears proposals and notices, except `scores:` lines (the score source failed,
+or a row could not be judged), which every route check rewrites.
 
 State lives in `~/.local/state/delegate-router/`, settings in
 `~/.config/delegate-router/config.env` (see [config.example.env](config.example.env)).
@@ -201,10 +214,12 @@ fixed format; for example:
 The installer doesn't create or edit it, and `uninstall.sh --purge` leaves it in place. It
 changes what the skill reads, not the watcher.
 
-## Jev (optional)
+## Jev (optional): judgement for a hundredth of a cent
 
-[Jev](https://typesafe.ai) (TypeSafe) is a very cheap classifier, about $0.0001 per call.
-Turned on, it does two jobs:
+[Jev](https://typesafe.ai) (TypeSafe) is a typed judgement model: it answers yes/no and
+ranking questions with a score, for about $0.0001 per call. That's cheap enough to ask it
+before every spec instead of paying a frontier model to read the whole repo. Turned on, it
+does two jobs:
 
 1. **Judges release notes.** Is a new name a real subscriber release, or API-only or a preview?
 2. **Scouts files before a spec.** It ranks which files a task needs, so the host reads 5

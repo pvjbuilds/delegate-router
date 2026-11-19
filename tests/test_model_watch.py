@@ -648,6 +648,151 @@ def test_an_acked_proposal_returns_once_it_is_benched():
     assert "(proposed)" in out and "Bench it" not in out, out
 
 
+def test_a_failed_snapshot_is_reported_once_and_cleared_when_it_works():
+    rows = {"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (75, 10)}
+    routes(rows, "<code>claude-opus-6</code>")
+    st = json.loads((tmp / "state/state.json").read_text())
+    st["snapshot"]["at"] = "2026-11-01"
+    (tmp / "state/state.json").write_text(json.dumps(st))
+    aa.write_text("not json")  # AA retired its old endpoint with a 410 on 2026-11-04; nothing said so for two weeks
+    watch("run", **KEY)
+    watch("run", **KEY)
+    out = watch("routes")
+    assert out.count("scores: Artificial Analysis failed (JSONDecodeError); routes not re-checked; last good scores from 2026-11-01") == 1, out
+    out = again(rows)
+    assert "scores:" not in out and "(proposed)" in out, out
+
+
+def test_an_empty_or_plain_http_score_source_is_reported_and_keeps_the_last_snapshot():
+    routes({"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (75, 10)}, "<code>claude-opus-6</code>")
+    before = json.loads((tmp / "state/state.json").read_text())["snapshot"]
+    aa.write_text('{"data": []}')
+    watch("run", **KEY)
+    assert "scores: Artificial Analysis failed (ValueError)" in watch("routes")
+    watch("run", DELEGATE_ROUTER_AA_URL="http://127.0.0.1:9/m", **KEY)
+    assert "scores: Artificial Analysis failed (ValueError)" in watch("routes")
+    assert json.loads((tmp / "state/state.json").read_text())["snapshot"] == before
+
+
+def test_a_score_outage_survives_ack():
+    routes({"gpt-6-sol-high": (70, 10)})
+    aa.write_text("not json")
+    watch("run", **KEY)
+    watch("ack")
+    assert "scores: Artificial Analysis failed" in watch("routes")
+    assert "after reviewing" not in watch("status")  # a health line is not news to acknowledge
+
+
+def test_two_benchlm_runs_in_a_row_do_not_crash_the_rescale_check():
+    benchlm.write_text(json.dumps({"items": [{"slug": "gpt-6-sol", "scores": {"displayCategoryScores": {"coding": 70}}}]}))
+    routes({}, ARTIFICIAL_ANALYSIS_API_KEY="")
+    out = watch("run", ARTIFICIAL_ANALYSIS_API_KEY="") + watch("routes", ARTIFICIAL_ANALYSIS_API_KEY="")
+    assert "check failed" not in out, out
+
+
+def test_a_row_with_no_holder_score_drops_its_old_proposal_and_says_so():
+    rows = {"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (75, 10)}
+    assert "(proposed)" in routes(rows, "<code>claude-opus-6</code>")
+    aa.write_text(json.dumps({"data": [{"slug": "gpt-6-sol-high", "evaluations": {"artificial_analysis_intelligence_index": 50}},
+                                       {"slug": "claude-opus-6-medium", "evaluations": {"artificial_analysis_coding_index": 75}}]}))
+    watch("run", **KEY)
+    out = watch("routes")
+    assert "(proposed)" not in out and "scores: rows not judged, no score for the holder: Bulk code (coding or terminal)" in out, out
+
+
+def test_an_unfinished_or_malformed_aa_catalogue_is_a_failure():
+    mw = mw_module()
+    os.environ["ARTIFICIAL_ANALYSIS_API_KEY"] = "k"
+    mw.AA_URL = "https://aa.test/m"
+    try:
+        mw.fetch = lambda url, *a, **k: json.dumps({"pagination": {"has_more": True}, "data": [{"slug": url[-6:].replace("?", "-").replace("=", "")}]})
+        assert mw.snapshot() == (None, "Artificial Analysis failed (ValueError)")  # still more pages at the cap
+        first = {"pagination": {"has_more": True}, "data": [{"slug": "a-high"}]}
+        mw.fetch = lambda url, *a, **k: json.dumps(first if url == mw.AA_URL else {"error": "x"})
+        assert mw.snapshot() == (None, "Artificial Analysis failed (ValueError)")  # page 2 is an error object
+        mw.fetch = lambda url, *a, **k: json.dumps(first if url == mw.AA_URL else {"error": "upstream timeout", "data": [], "pagination": {"has_more": False}})
+        assert mw.snapshot() == (None, "Artificial Analysis failed (ValueError)")  # an error that still carries data
+        mw.fetch = lambda url, *a, **k: json.dumps({"pagination": {"has_more": 1}, "data": [{"slug": "a-high"}]})
+        assert mw.snapshot() == (None, "Artificial Analysis failed (ValueError)")  # page 1 that can't say if more follow
+        for bad in ([], {"data": [], "pagination": {}}):  # a continuation page that cannot say whether more follow
+            mw.fetch = lambda url, *a, **k: json.dumps(first if url == mw.AA_URL else bad)
+            assert mw.snapshot() == (None, "Artificial Analysis failed (ValueError)"), bad
+    finally:
+        del os.environ["ARTIFICIAL_ANALYSIS_API_KEY"]
+
+
+def test_a_catalog_failover_drops_the_old_proposal():
+    assert "(proposed)" in routes({"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (75, 10)}, "<code>claude-opus-6</code>")
+    watch("run", CODEX_BIN=stub(bindir / "codex3", 'echo \'{"models":[]}\'\n'), **KEY)
+    out = watch("routes")
+    assert "(applied)" in out and "(proposed)" not in out, out
+
+
+def test_the_default_coming_back_drops_a_proposal_made_against_the_fallback():
+    routes({"gpt-6-sol-high": (70, 10)}, CODEX_BIN=stub(bindir / "codex2", 'echo \'{"models":[]}\'\n'))
+    st = json.loads((tmp / "state/state.json").read_text())
+    st["proposals"]["Bulk code"] = {"model": "claude-opus-6", "effort": "medium", "cli": "claude", "index": "x",
+                                    "source": "aa", "was": "claude-opus-5-5 medium", "at": "2026-11-01"}
+    (tmp / "state/state.json").write_text(json.dumps(st))
+    aa.write_text("not json")
+    watch("run", **KEY)
+    out = watch("routes")
+    assert "override gpt-6-sol" not in out and "dropped" in out and "(proposed)" not in out, out
+
+
+def test_a_failover_that_also_drops_a_proposal_counts_one_change():
+    rows = {"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (75, 10)}
+    assert "(proposed)" in routes(rows, "<code>claude-opus-6</code>")
+    scores(rows, 0.8)
+    watch("run", CODEX_BIN=stub(bindir / "codex3", 'echo \'{"models":[]}\'\n'), **KEY)
+    assert "1 change(s)" in watch("status"), watch("status")
+
+
+def test_the_change_count_is_rows_that_moved():
+    routes({"gpt-6-sol-high": (70, 10)})
+    scores({"gpt-6-sol-high": (70, 10)}, 0.8)
+    watch("run", CODEX_BIN=stub(bindir / "codex4", 'echo \'{"models":[]}\'\n'), **KEY)
+    assert "1 change(s)" in watch("status"), watch("status")  # a failover alone
+    routes({"gpt-6-sol-high": (70, 10)})
+    aa.write_text(json.dumps({"data": [{"slug": "gpt-6-sol-high", "evaluations": {"artificial_analysis_intelligence_index": 40}}]}))
+    watch("run", **KEY)
+    assert "0 change(s)" in watch("status"), watch("status")  # a row left unjudged moved nothing
+    rows = {"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (75, 10)}
+    assert "(proposed)" in routes(rows, "<code>claude-opus-6</code>")
+    scores({"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (60, 10)}, 0.8)
+    watch("run", **KEY)
+    assert "1 change(s)" in watch("status"), watch("status")  # a proposal that lost on fresh scores
+
+
+def test_a_crashed_route_check_is_shown_not_just_logged():
+    routes({"gpt-6-sol-high": (70, 10)})
+    st = json.loads((tmp / "state/state.json").read_text())
+    st["snapshot"]["scores"]["gpt-6-sol-high"] = "corrupt"
+    (tmp / "state/state.json").write_text(json.dumps(st))
+    watch("run", **KEY)
+    assert "scores: route check failed (AttributeError); see watch.log" in watch("routes")
+
+
+def test_aa_v2_free_endpoint_is_read_page_by_page_with_a_blended_price():
+    mw = mw_module()
+    pages = {"https://aa.test/m": {"pagination": {"has_more": True}, "data": [
+                 {"slug": "a-high", "evaluations": {"artificial_analysis_coding_index": 40},
+                  "pricing": {"price_1m_input_tokens": 2, "price_1m_output_tokens": 10}}]},
+             "https://aa.test/m?page=2": {"pagination": {"has_more": False}, "data": [
+                 {"slug": "b-high", "evaluations": {"artificial_analysis_intelligence_index": 55},
+                  "pricing": {"price_1m_input_tokens": 1, "price_1m_output_tokens": 5}}]}}
+    asked = []
+    mw.fetch = lambda url, *a, **k: asked.append(url) or json.dumps(pages[url])
+    mw.AA_URL, os.environ["ARTIFICIAL_ANALYSIS_API_KEY"] = "https://aa.test/m", "k"
+    try:
+        snap = mw.snapshot()[0]
+    finally:
+        del os.environ["ARTIFICIAL_ANALYSIS_API_KEY"]
+    assert asked == ["https://aa.test/m", "https://aa.test/m?page=2"], asked
+    assert snap["scores"]["a-high"]["coding"] == 40 and snap["scores"]["a-high"]["price"] == 4.0, snap  # (3*2+10)/4
+    assert snap["scores"]["b-high"]["reasoning"] == 55 and snap["scores"]["b-high"]["price"] == 2.0, snap
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):
