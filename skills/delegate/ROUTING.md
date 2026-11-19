@@ -1,6 +1,6 @@
 # Routing map: which model gets which task
 
-Snapshot: 2026-11-01
+Snapshot: 2026-11-20
 
 The delegate skill reads this file to pick a model. Benchmarks are a prior, not proof: **a
 check run on the actual task beats any benchmark.** Neutral benchmarks pick a new model's
@@ -44,8 +44,8 @@ If nothing in a row qualifies, the host does the work itself.
 | **Images**: screenshots, scanned pages, charts (image files) | 1. GPT-6.1 Terra<br>2. Gemini 3.8 Flash | `codex exec -i <file>` · `gpt-6.1-terra`<br>`agy` · `gemini-3.8-flash-high` | medium<br>(in the ID) |
 | **Media and long reads**: PDF, video, audio, long documents | 1. Gemini 3.8 Flash<br>2. Claude Opus 5.5 | `agy` · `gemini-3.8-flash-high`<br>`opus-implementer` · `claude-opus-5-5` | (in the ID)<br>medium |
 | **Single-file text** with no repo access: a conversion, a fixture, a draft | 1. Gemini 3.8 Flash<br>2. GPT-6.1 Sol | `agy` · `gemini-3.8-flash-high`<br>`codex` · `gpt-6.1-sol` | (in the ID)<br>medium |
-| **Hard reasoning**: maths, proofs, algorithms, science, very large documents | 1. GPT-6 Astra | `codex` · `gpt-6-astra` | low, raise only if needed |
-| **Review**: security review, second opinion on a design or a diff | 1. GPT-6 Astra (read-only)<br>2. Claude Opus 5.5 (read-only) | `codex -s read-only` · `gpt-6-astra`<br>`claude -p --restricted` · `claude-opus-5-5` (SKILL.md has the full command) | low<br>medium |
+| **Hard reasoning**: maths, proofs, algorithms, science, very large documents | 1. GPT-6.2 Astra | `codex` · `gpt-6.2-astra` | low, raise only if needed |
+| **Review**: security review, second opinion on a design or a diff | 1. GPT-6.2 Astra (read-only)<br>2. Claude Opus 5.5 (read-only) | `codex -s read-only` · `gpt-6.2-astra`<br>`claude -p --restricted` · `claude-opus-5-5` (SKILL.md has the full command) | low<br>medium |
 
 **Quota out.** A usage-limit error usually names its reset time. Say it in one line and fall
 through to the next candidate; don't stall. If a CLI call fails, report that model as
@@ -67,8 +67,13 @@ In our own words; the numbers live on the trackers linked at the bottom.
   knee: each step up costs much more per point gained.
 - **Claude Sonnet 5.5 is not routed.** It is cheaper per token but uses far more tokens, so it
   costs more per task at equal quality. **Compare cost per task, not price per token.**
-- **GPT-6 Astra** leads on maths, science, abstract reasoning, very long-context retrieval and
+- **GPT-6.2 Astra** leads on maths, science, abstract reasoning, very long-context retrieval and
   security work. It is slow and expensive, so it gets hard problems and reviews, not bulk typing.
+  It replaced GPT-6 Astra on 2026-11-20: higher on independent intelligence indexes at every
+  effort, a lower price per token, and on our bench it passed the same tasks for less per task.
+- **GPT-6.2 Sol is not routed yet.** It scores higher than GPT-6.1 Sol on the trackers, but on our
+  bench (2026-11-20) it passed the same tasks on about twice the tokens at the same price per
+  token, so it costs more per task. GPT-6.1 Sol keeps its rows until a newer run says otherwise.
 - **Gemini 3.8 Flash** is fast and cheap, and strong at video and other media. It is weak at
   multi-step agent work, so it runs in plan mode and only its text output is used.
 - **GPT-6.1 Terra** also reads images. Independent multimodal scores put it at or near the top

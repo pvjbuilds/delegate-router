@@ -129,7 +129,7 @@ map ("send this to Gemini").
 | Trivial mechanical edits | GPT-6 Luna (Codex) | Claude Opus 5.5 |
 | Images, screenshots, scanned pages | GPT-6.1 Terra (Codex) | Gemini 3.8 Flash |
 | PDFs, video, audio, long documents | Gemini 3.8 Flash (agy) | Claude Opus 5.5 |
-| Hard reasoning, security review (read-only) | GPT-6 Astra (Codex) | Claude Opus 5.5 |
+| Hard reasoning, security review (read-only) | GPT-6.2 Astra (Codex) | Claude Opus 5.5 |
 
 Your main agent's own plan is skipped where the row has an alternative, so the work lands on
 another subscription: on a Codex host, bulk code goes to Claude Opus 5.5; on a Claude Code host,
@@ -360,7 +360,7 @@ Claude Code subagent · subagent · coding agent · AI coding agent · agentic c
 use your ChatGPT plan in Claude Code · use your Claude plan in Codex · spread work across
 subscriptions · quota pooling · save tokens · token optimization · reduce AI coding cost · cost per task · subscription quota ·
 model release watcher · new model alerts · benchmark-driven routing · self-updating routes · OpenAI Codex · Google Gemini · Anthropic Claude ·
-Antigravity CLI · agy · Claude Opus 5.5 · GPT-6.1 Sol · GPT-6.1 Terra · GPT-6 Luna · GPT-6 Astra ·
+Antigravity CLI · agy · Claude Opus 5.5 · GPT-6.1 Sol · GPT-6.1 Terra · GPT-6 Luna · GPT-6.2 Astra ·
 Gemini 3.8 Flash · TypeSafe Jev · model benchmark · LLM eval
 
 ## License

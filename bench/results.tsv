@@ -19,3 +19,10 @@ date	cli	model	effort	task	result	seconds	input_tokens	output_tokens
 2026-10-27 15:13	codex	gpt-6.1-terra	medium	10-migrate	PASS	39	132500	1364
 2026-10-27 15:13	codex	gpt-6.1-sol	high	9-semver	PASS	92	112168	4309
 2026-10-27 15:14	codex	gpt-6.1-sol	high	10-migrate	PASS	53	196707	2033
+2026-11-20 00:56	codex	gpt-6.2-sol	high	6-bugfix	PASS	78	270216	3665
+2026-11-20 00:58	codex	gpt-6.2-sol	high	9-semver	PASS	126	280847	8229
+2026-11-20 01:00	codex	gpt-6.2-sol	high	10-migrate	PASS	79	273685	1941
+2026-11-20 01:02	codex	gpt-6.2-astra	low	6-bugfix	PASS	36	219367	581
+2026-11-20 01:02	codex	gpt-6.2-astra	low	9-semver	PASS	46	145552	1511
+2026-11-20 01:03	codex	gpt-6-astra	low	6-bugfix	PASS	36	145828	1140
+2026-11-20 01:04	codex	gpt-6-astra	low	9-semver	PASS	72	184956	2769
