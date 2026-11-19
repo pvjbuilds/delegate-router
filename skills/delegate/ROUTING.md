@@ -72,8 +72,9 @@ In our own words; the numbers live on the trackers linked at the bottom.
   It replaced GPT-6 Astra on 2026-11-20: higher on independent intelligence indexes at every
   effort, a lower price per token, and on our bench it passed the same tasks for less per task.
 - **GPT-6.2 Sol is not routed yet.** It scores higher than GPT-6.1 Sol on the trackers, but on our
-  bench (2026-11-20) it passed the same tasks on about twice the tokens at the same price per
-  token, so it costs more per task. GPT-6.1 Sol keeps its rows until a newer run says otherwise.
+  bench (2026-11-20) it passed the same tasks with more agent turns and more fresh tokens at the
+  same price per token, so it costs more per task (with cached input priced in, about 1.3x at
+  medium and 1.5x at high). GPT-6.1 Sol keeps its rows until a newer run says otherwise.
 - **Gemini 3.8 Flash** is fast and cheap, and strong at video and other media. It is weak at
   multi-step agent work, so it runs in plan mode and only its text output is used.
 - **GPT-6.1 Terra** also reads images. Independent multimodal scores put it at or near the top
