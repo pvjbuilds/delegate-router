@@ -1,61 +1,61 @@
-date	cli	model	effort	task	result	seconds	input_tokens	output_tokens
-2026-10-27 14:29	codex	gpt-6.1-sol	high	1-function	PASS	35	99287	795
-2026-10-27 14:30	codex	gpt-6.1-sol	high	2-rename	PASS	40	125679	486
-2026-10-27 14:31	codex	gpt-6.1-sol	high	3-tests	PASS	37	101507	728
-2026-10-27 14:31	codex	gpt-6.1-sol	high	4-convert	PASS	49	138889	589
-2026-10-27 14:32	codex	gpt-6.1-sol	high	5-extract	PASS	22	77495	293
-2026-10-27 14:32	codex	gpt-6.1-terra	medium	1-function	PASS	19	73632	477
-2026-10-27 14:32	codex	gpt-6.1-terra	medium	2-rename	PASS	21	74228	426
-2026-10-27 14:33	codex	gpt-6.1-terra	medium	3-tests	PASS	26	99782	570
-2026-10-27 14:33	codex	gpt-6.1-terra	medium	4-convert	PASS	17	74870	378
-2026-10-27 14:33	codex	gpt-6.1-terra	medium	5-extract	PASS	21	78060	302
-2026-10-27 15:01	codex	gpt-6.1-terra	medium	6-bugfix	PASS	31	136283	1040
-2026-10-27 15:02	codex	gpt-6.1-terra	medium	7-bisect	PASS	50	105639	996
-2026-10-27 15:03	codex	gpt-6.1-terra	medium	8-image	PASS	41	76192	425
-2026-10-27 15:02	codex	gpt-6.1-sol	high	6-bugfix	PASS	40	108731	1432
-2026-10-27 15:03	codex	gpt-6.1-sol	high	7-bisect	PASS	75	210013	2910
-2026-10-27 15:03	codex	gpt-6.1-sol	high	8-image	PASS	24	77092	464
-2026-10-27 15:12	codex	gpt-6.1-terra	medium	9-semver	PASS	42	133231	2642
-2026-10-27 15:13	codex	gpt-6.1-terra	medium	10-migrate	PASS	39	132500	1364
-2026-10-27 15:13	codex	gpt-6.1-sol	high	9-semver	PASS	92	112168	4309
-2026-10-27 15:14	codex	gpt-6.1-sol	high	10-migrate	PASS	53	196707	2033
-2026-11-20 00:56	codex	gpt-6.2-sol	high	6-bugfix	PASS	78	270216	3665
-2026-11-20 00:58	codex	gpt-6.2-sol	high	9-semver	PASS	126	280847	8229
-2026-11-20 01:00	codex	gpt-6.2-sol	high	10-migrate	PASS	79	273685	1941
-2026-11-20 01:02	codex	gpt-6.2-astra	low	6-bugfix	PASS	36	219367	581
-2026-11-20 01:02	codex	gpt-6.2-astra	low	9-semver	PASS	46	145552	1511
-2026-11-20 01:03	codex	gpt-6-astra	low	6-bugfix	PASS	36	145828	1140
-2026-11-20 01:04	codex	gpt-6-astra	low	9-semver	PASS	72	184956	2769
-2026-11-20 01:10	codex	gpt-6.2-astra	low	1-function	PASS	32	102727	471
-2026-11-20 01:10	codex	gpt-6-astra	low	1-function	PASS	32	98632	544
-2026-11-20 01:10	codex	gpt-6.2-sol	medium	1-function	PASS	35	175734	732
-2026-11-20 01:10	codex	gpt-6.2-sol	high	1-function	PASS	45	179855	1344
-2026-11-20 01:10	codex	gpt-6.2-astra	low	2-rename	PASS	35	102872	316
-2026-11-20 01:10	codex	gpt-6.2-sol	medium	2-rename	PASS	40	182196	655
-2026-11-20 01:11	codex	gpt-6-astra	low	2-rename	PASS	49	139053	503
-2026-11-20 01:11	codex	gpt-6.2-sol	high	2-rename	PASS	39	221750	679
-2026-11-20 01:11	codex	gpt-6.2-astra	low	3-tests	PASS	29	101663	438
-2026-11-20 01:11	codex	gpt-6.2-sol	medium	3-tests	PASS	42	225214	796
-2026-11-20 01:11	codex	gpt-6.2-astra	low	4-convert	PASS	28	102672	313
-2026-11-20 01:11	codex	gpt-6-astra	low	3-tests	PASS	44	171670	850
-2026-11-20 01:11	codex	gpt-6.2-sol	high	3-tests	PASS	46	182284	920
-2026-11-20 01:12	codex	gpt-6-astra	low	4-convert	PASS	37	101648	392
-2026-11-20 01:12	codex	gpt-6.2-sol	medium	4-convert	PASS	45	185769	597
-2026-11-20 01:12	codex	gpt-6.2-astra	low	5-extract	PASS	38	101812	270
-2026-11-20 01:12	codex	gpt-6.2-sol	high	4-convert	PASS	50	157375	1006
-2026-11-20 01:13	codex	gpt-6-astra	low	5-extract	PASS	33	97522	274
-2026-11-20 01:13	codex	gpt-6.2-sol	medium	5-extract	PASS	34	144494	552
-2026-11-20 01:13	codex	gpt-6.2-sol	high	5-extract	PASS	26	144560	524
-2026-11-20 01:13	codex	gpt-6.2-astra	low	7-bisect	PASS	43	178924	574
-2026-11-20 01:13	codex	gpt-6.2-sol	medium	6-bugfix	PASS	46	223981	1315
-2026-11-20 01:13	codex	gpt-6.2-astra	low	8-image	PASS	23	105300	318
-2026-11-20 01:13	codex	gpt-6-astra	low	7-bisect	PASS	38	151144	838
-2026-11-20 01:14	codex	gpt-6-astra	low	8-image	PASS	25	101102	409
-2026-11-20 01:14	codex	gpt-6.2-sol	high	7-bisect	PASS	65	327613	1598
-2026-11-20 01:14	codex	gpt-6.2-astra	low	10-migrate	PASS	34	179753	685
-2026-11-20 01:14	codex	gpt-6.2-sol	high	8-image	PASS	28	146671	718
-2026-11-20 01:14	codex	gpt-6.2-sol	medium	7-bisect	PASS	51	239194	1167
-2026-11-20 01:15	codex	gpt-6.2-sol	medium	8-image	PASS	29	145887	497
-2026-11-20 01:15	codex	gpt-6-astra	low	10-migrate	PASS	62	262940	1189
-2026-11-20 01:16	codex	gpt-6.2-sol	medium	9-semver	PASS	75	227066	3671
-2026-11-20 01:17	codex	gpt-6.2-sol	medium	10-migrate	PASS	56	261333	1597
+date	cli	model	effort	task	result	seconds	input_tokens	output_tokens	cached_tokens
+2026-10-27 14:29	codex	gpt-6.1-sol	high	1-function	PASS	35	99287	795	86144
+2026-10-27 14:30	codex	gpt-6.1-sol	high	2-rename	PASS	40	125679	486	105344
+2026-10-27 14:31	codex	gpt-6.1-sol	high	3-tests	PASS	37	101507	728	87552
+2026-10-27 14:31	codex	gpt-6.1-sol	high	4-convert	PASS	49	138889	589	119040
+2026-10-27 14:32	codex	gpt-6.1-sol	high	5-extract	PASS	22	77495	293	47616
+2026-10-27 14:32	codex	gpt-6.1-terra	medium	1-function	PASS	19	73632	477	60160
+2026-10-27 14:32	codex	gpt-6.1-terra	medium	2-rename	PASS	21	74228	426	34176
+2026-10-27 14:33	codex	gpt-6.1-terra	medium	3-tests	PASS	26	99782	570	51712
+2026-10-27 14:33	codex	gpt-6.1-terra	medium	4-convert	PASS	17	74870	378	55040
+2026-10-27 14:33	codex	gpt-6.1-terra	medium	5-extract	PASS	21	78060	302	54528
+2026-10-27 15:01	codex	gpt-6.1-terra	medium	6-bugfix	PASS	31	136283	1040	119296
+2026-10-27 15:02	codex	gpt-6.1-terra	medium	7-bisect	PASS	50	105639	996	89344
+2026-10-27 15:03	codex	gpt-6.1-terra	medium	8-image	PASS	41	76192	425	62080
+2026-10-27 15:02	codex	gpt-6.1-sol	high	6-bugfix	PASS	40	108731	1432	91776
+2026-10-27 15:03	codex	gpt-6.1-sol	high	7-bisect	PASS	75	210013	2910	186368
+2026-10-27 15:03	codex	gpt-6.1-sol	high	8-image	PASS	24	77092	464	62848
+2026-10-27 15:12	codex	gpt-6.1-terra	medium	9-semver	PASS	42	133231	2642	111616
+2026-10-27 15:13	codex	gpt-6.1-terra	medium	10-migrate	PASS	39	132500	1364	116096
+2026-10-27 15:13	codex	gpt-6.1-sol	high	9-semver	PASS	92	112168	4309	60416
+2026-10-27 15:14	codex	gpt-6.1-sol	high	10-migrate	PASS	53	196707	2033	165888
+2026-11-20 00:56	codex	gpt-6.2-sol	high	6-bugfix	PASS	78	270216	3665	241024
+2026-11-20 00:58	codex	gpt-6.2-sol	high	9-semver	PASS	126	280847	8229	249984
+2026-11-20 01:00	codex	gpt-6.2-sol	high	10-migrate	PASS	79	273685	1941	229120
+2026-11-20 01:02	codex	gpt-6.2-astra	low	6-bugfix	PASS	36	219367	581	194944
+2026-11-20 01:02	codex	gpt-6.2-astra	low	9-semver	PASS	46	145552	1511	120576
+2026-11-20 01:03	codex	gpt-6-astra	low	6-bugfix	PASS	36	145828	1140	116480
+2026-11-20 01:04	codex	gpt-6-astra	low	9-semver	PASS	72	184956	2769	158592
+2026-11-20 01:10	codex	gpt-6.2-astra	low	1-function	PASS	32	102727	471	79744
+2026-11-20 01:10	codex	gpt-6-astra	low	1-function	PASS	32	98632	544	75520
+2026-11-20 01:10	codex	gpt-6.2-sol	medium	1-function	PASS	35	175734	732	151168
+2026-11-20 01:10	codex	gpt-6.2-sol	high	1-function	PASS	45	179855	1344	155264
+2026-11-20 01:10	codex	gpt-6.2-astra	low	2-rename	PASS	35	102872	316	79872
+2026-11-20 01:10	codex	gpt-6.2-sol	medium	2-rename	PASS	40	182196	655	157056
+2026-11-20 01:11	codex	gpt-6-astra	low	2-rename	PASS	49	139053	503	113536
+2026-11-20 01:11	codex	gpt-6.2-sol	high	2-rename	PASS	39	221750	679	196352
+2026-11-20 01:11	codex	gpt-6.2-astra	low	3-tests	PASS	29	101663	438	79232
+2026-11-20 01:11	codex	gpt-6.2-sol	medium	3-tests	PASS	42	225214	796	197888
+2026-11-20 01:11	codex	gpt-6.2-astra	low	4-convert	PASS	28	102672	313	79872
+2026-11-20 01:11	codex	gpt-6-astra	low	3-tests	PASS	44	171670	850	148096
+2026-11-20 01:11	codex	gpt-6.2-sol	high	3-tests	PASS	46	182284	920	133248
+2026-11-20 01:12	codex	gpt-6-astra	low	4-convert	PASS	37	101648	392	73088
+2026-11-20 01:12	codex	gpt-6.2-sol	medium	4-convert	PASS	45	185769	597	144000
+2026-11-20 01:12	codex	gpt-6.2-astra	low	5-extract	PASS	38	101812	270	79360
+2026-11-20 01:12	codex	gpt-6.2-sol	high	4-convert	PASS	50	157375	1006	125184
+2026-11-20 01:13	codex	gpt-6-astra	low	5-extract	PASS	33	97522	274	74880
+2026-11-20 01:13	codex	gpt-6.2-sol	medium	5-extract	PASS	34	144494	552	118784
+2026-11-20 01:13	codex	gpt-6.2-sol	high	5-extract	PASS	26	144560	524	105984
+2026-11-20 01:13	codex	gpt-6.2-astra	low	7-bisect	PASS	43	178924	574	147584
+2026-11-20 01:13	codex	gpt-6.2-sol	medium	6-bugfix	PASS	46	223981	1315	197376
+2026-11-20 01:13	codex	gpt-6.2-astra	low	8-image	PASS	23	105300	318	81408
+2026-11-20 01:13	codex	gpt-6-astra	low	7-bisect	PASS	38	151144	838	119424
+2026-11-20 01:14	codex	gpt-6-astra	low	8-image	PASS	25	101102	409	77440
+2026-11-20 01:14	codex	gpt-6.2-sol	high	7-bisect	PASS	65	327613	1598	296448
+2026-11-20 01:14	codex	gpt-6.2-astra	low	10-migrate	PASS	34	179753	685	154240
+2026-11-20 01:14	codex	gpt-6.2-sol	high	8-image	PASS	28	146671	718	106752
+2026-11-20 01:14	codex	gpt-6.2-sol	medium	7-bisect	PASS	51	239194	1167	208384
+2026-11-20 01:15	codex	gpt-6.2-sol	medium	8-image	PASS	29	145887	497	120448
+2026-11-20 01:15	codex	gpt-6-astra	low	10-migrate	PASS	62	262940	1189	234752
+2026-11-20 01:16	codex	gpt-6.2-sol	medium	9-semver	PASS	75	227066	3671	200192
+2026-11-20 01:17	codex	gpt-6.2-sol	medium	10-migrate	PASS	56	261333	1597	210304

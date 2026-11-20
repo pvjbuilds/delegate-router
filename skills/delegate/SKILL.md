@@ -113,6 +113,15 @@ codex exec -m <model> -c model_reasoning_effort=<effort> \
   has no network by default, and some models delete tests they can't run or try workarounds
   when access is denied.
 - Run it in the background when the host allows it.
+- **Follow-up rounds resume the session.** For a second review round or a fix request on the
+  same work, add `--json > <tmp>/round1.jsonl` to the first call and read its `"thread_id"`.
+  Then send only what changed:
+  `codex exec resume <thread_id> -m <model> -c model_reasoning_effort=<effort> --ignore-user-config --ignore-rules -c features.apps=false -c sandbox_mode=read-only -o <tmp>/round2.md "<what changed, which files>" < /dev/null`.
+  The model keeps what it already read, and the replayed history bills at the cache-hit rate:
+  a measured review round cost about a quarter of a fresh one, with the same findings.
+  `resume` takes no `-s`, so set the sandbox with `-c sandbox_mode` (`workspace-write` to
+  implement). Resume within minutes, while the cache is warm, and name the files that changed
+  so it re-reads them.
 
 ### Gemini (`agy -p`): plan mode, text out
 

@@ -35,7 +35,7 @@ def command(cli, model, effort, prompt, cwd):
 
 
 def tokens(stdout):
-    """(input incl. cached, output) from the last usage object the CLI printed; agy prints none."""
+    """(input incl. cached, output, cached) from the last usage object the CLI printed; agy prints none."""
     usage = None
     for line in stdout.splitlines():
         try:
@@ -45,9 +45,34 @@ def tokens(stdout):
         if isinstance(event, dict) and isinstance(event.get("usage"), dict):
             usage = event["usage"]
     if not usage:
-        return "", ""
-    inp = usage.get("input_tokens", 0) + usage.get("cache_read_input_tokens", 0) + usage.get("cache_creation_input_tokens", 0)
-    return inp, usage.get("output_tokens", 0) + usage.get("reasoning_output_tokens", 0)
+        return "", "", ""
+    num = lambda k: usage.get(k) if isinstance(usage.get(k), int) and not isinstance(usage.get(k), bool) else None
+    if num("input_tokens") is None or num("output_tokens") is None:
+        return "", "", ""  # a required total that is missing or unreadable is not measured, never zero
+    z = lambda k: num(k) or 0
+    inp = z("input_tokens") + z("cache_read_input_tokens") + z("cache_creation_input_tokens")
+    # Codex says cached_input_tokens, Claude cache_read_input_tokens; neither readable means not measured
+    has = num("cached_input_tokens") is not None or num("cache_read_input_tokens") is not None
+    return inp, z("output_tokens") + z("reasoning_output_tokens"), z("cached_input_tokens") + z("cache_read_input_tokens") if has else ""
+
+
+HEADER = "date\tcli\tmodel\teffort\ttask\tresult\tseconds\tinput_tokens\toutput_tokens\tcached_tokens"
+
+
+def write_log(log, rows):
+    """Append rows; a log from before the cached_tokens column gets the column first, old rows left blank."""
+    text = log.read_text() if log.exists() else ""
+    if text and "cached_tokens" not in text.split("\n", 1)[0]:
+        head, _, rest = text.partition("\n")
+        text = head + "\tcached_tokens\n" + "".join(l + "\t\n" for l in rest.splitlines())
+        log.write_text(text)
+    elif text and not text.endswith("\n"):
+        text += "\n"
+        log.write_text(text)
+    with log.open("a") as f:
+        if not text:
+            f.write(HEADER + "\n")
+        f.writelines("\t".join(map(str, r)) + "\n" for r in rows)
 
 
 def setup(task, tmp):
@@ -79,15 +104,10 @@ def run(cli, model, effort, only):
             secs = round(time.time() - start)
             result = check(task, tmp)
             ok = "PASS" if result.returncode == 0 else "FAIL"
-            inp, outp = tokens(out)
-            rows.append([datetime.now().strftime("%Y-%m-%d %H:%M"), cli, model, effort, task.name, ok, secs, inp, outp])
-            print("\t".join(map(str, rows[-1][4:])), result.stderr.strip().splitlines()[-1:] if ok == "FAIL" else "", flush=True)
-    log = HERE / "results.tsv"
-    new = not log.exists()
-    with log.open("a") as f:
-        if new:
-            f.write("date\tcli\tmodel\teffort\ttask\tresult\tseconds\tinput_tokens\toutput_tokens\n")
-        f.writelines("\t".join(map(str, r)) + "\n" for r in rows)
+            inp, outp, cached = tokens(out)
+            rows.append([datetime.now().strftime("%Y-%m-%d %H:%M"), cli, model, effort, task.name, ok, secs, inp, outp, cached])
+            print("\t".join(map(str, rows[-1][4:9])), result.stderr.strip().splitlines()[-1:] if ok == "FAIL" else "", flush=True)
+    write_log(HERE / "results.tsv", rows)
     passed = sum(r[5] == "PASS" for r in rows)
     print(f"{model} {effort}: {passed}/{len(rows)} passed, {sum(r[6] for r in rows)} s")
 

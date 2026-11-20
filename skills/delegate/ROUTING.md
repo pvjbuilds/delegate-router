@@ -38,12 +38,12 @@ If nothing in a row qualifies, the host does the work itself.
 
 | Task | Candidates, in order | CLI and model ID | Effort |
 |---|---|---|---|
-| **Bulk code** from a written spec: new module, boilerplate, test stubs, many-file mechanical edits | 1. GPT-6.1 Terra<br>2. GPT-6.1 Sol<br>3. Claude Opus 5.5 | `codex` · `gpt-6.1-terra`<br>`codex` · `gpt-6.1-sol`<br>`opus-implementer` · `claude-opus-5-5` | medium<br>high<br>medium |
-| **Must be right**: correctness matters more than quota, terminal-heavy agent work, or a spec the first pick already failed | 1. Claude Opus 5.5<br>2. GPT-6.1 Sol | `opus-implementer` · `claude-opus-5-5`<br>`codex` · `gpt-6.1-sol` | medium<br>high |
+| **Bulk code** from a written spec: new module, boilerplate, test stubs, many-file mechanical edits | 1. GPT-6.1 Terra<br>2. GPT-6.2 Sol<br>3. Claude Opus 5.5 | `codex` · `gpt-6.1-terra`<br>`codex` · `gpt-6.2-sol`<br>`opus-implementer` · `claude-opus-5-5` | medium<br>medium<br>medium |
+| **Must be right**: correctness matters more than quota, terminal-heavy agent work, or a spec the first pick already failed | 1. Claude Opus 5.5<br>2. GPT-6.2 Sol | `opus-implementer` · `claude-opus-5-5`<br>`codex` · `gpt-6.2-sol` | medium<br>medium |
 | **Trivial edits**: reformatting, renames, mechanical find-and-replace | 1. GPT-6 Luna<br>2. Claude Opus 5.5 | `codex` · `gpt-6-luna`<br>`opus-implementer` · `claude-opus-5-5` | medium<br>medium |
 | **Images**: screenshots, scanned pages, charts (image files) | 1. GPT-6.1 Terra<br>2. Gemini 3.8 Flash | `codex exec -i <file>` · `gpt-6.1-terra`<br>`agy` · `gemini-3.8-flash-high` | medium<br>(in the ID) |
 | **Media and long reads**: PDF, video, audio, long documents | 1. Gemini 3.8 Flash<br>2. Claude Opus 5.5 | `agy` · `gemini-3.8-flash-high`<br>`opus-implementer` · `claude-opus-5-5` | (in the ID)<br>medium |
-| **Single-file text** with no repo access: a conversion, a fixture, a draft | 1. Gemini 3.8 Flash<br>2. GPT-6.1 Sol | `agy` · `gemini-3.8-flash-high`<br>`codex` · `gpt-6.1-sol` | (in the ID)<br>medium |
+| **Single-file text** with no repo access: a conversion, a fixture, a draft | 1. Gemini 3.8 Flash<br>2. GPT-6.2 Sol | `agy` · `gemini-3.8-flash-high`<br>`codex` · `gpt-6.2-sol` | (in the ID)<br>medium |
 | **Hard reasoning**: maths, proofs, algorithms, science, very large documents | 1. GPT-6.2 Astra | `codex` · `gpt-6.2-astra` | low, raise only if needed |
 | **Review**: security review, second opinion on a design or a diff | 1. GPT-6.2 Astra (read-only)<br>2. Claude Opus 5.5 (read-only) | `codex -s read-only` · `gpt-6.2-astra`<br>`claude -p --restricted` · `claude-opus-5-5` (SKILL.md has the full command) | low<br>medium |
 
@@ -58,10 +58,11 @@ In our own words; the numbers live on the trackers linked at the bottom.
 - **GPT-6.1 Terra** is the default typist since 2026-11-01, the maintainer's pick to spend
   fewer tokens. On our bench (`bench/`) it passed 10/10 on 2026-10-27, as GPT-6.1 Sol high did,
   on fewer tokens. It runs on the Codex plan's separate quota. After a failed run, escalate to
-  GPT-6.1 Sol, then Opus, rather than retrying Terra.
-- **GPT-6.1 Sol** is the second typist. On independent intelligence indexes it lands close to
-  Opus at medium effort for a fraction of the cost per task. On terminal and agentic coding
-  trackers it leads Terra clearly, so it takes over when Terra fails a packet.
+  GPT-6.2 Sol, then Opus, rather than retrying Terra.
+- **GPT-6.2 Sol at medium** is the second typist since 2026-11-20 (the maintainer's pick). At
+  medium it scores above GPT-6.1 Sol at high on independent intelligence indexes and answers
+  much faster. On our bench it passed 10/10 for about $0.09 per task with cached input priced in,
+  a couple of cents more than GPT-6.1 Sol high. It takes over when Terra fails a packet.
 - **Claude Opus 5.5 at medium effort** is the must-be-right choice and the fallback for
   everything. It leads on agentic tool use and production software engineering. Medium is its
   knee: each step up costs much more per point gained.
@@ -71,10 +72,7 @@ In our own words; the numbers live on the trackers linked at the bottom.
   security work. It is slow and expensive, so it gets hard problems and reviews, not bulk typing.
   It replaced GPT-6 Astra on 2026-11-20: higher on independent intelligence indexes at every
   effort, a lower price per token, and on our bench it passed the same tasks for less per task.
-- **GPT-6.2 Sol is not routed yet.** It scores higher than GPT-6.1 Sol on the trackers, but on our
-  bench (2026-11-20) it passed the same tasks with more agent turns and more fresh tokens at the
-  same price per token, so it costs more per task (with cached input priced in, about 1.3x at
-  medium and 1.5x at high). GPT-6.1 Sol keeps its rows until a newer run says otherwise.
+- **GPT-6.1 Sol** is replaced by GPT-6.2 Sol (2026-11-20).
 - **Gemini 3.8 Flash** is fast and cheap, and strong at video and other media. It is weak at
   multi-step agent work, so it runs in plan mode and only its text output is used.
 - **GPT-6.1 Terra** also reads images. Independent multimodal scores put it at or near the top
@@ -127,8 +125,8 @@ In our own words; the numbers live on the trackers linked at the bottom.
   1. Confirm plan access in the vendor's release notes.
   2. Re-read the trackers below for every model in the table, not just the new one.
   3. Bench it: `python3 bench/bench.py codex|claude|agy <model> [effort]`, then the current
-     holder of the route it would take. It takes the route only if it passes more tasks, or
-     as many for no more cost. Results append to `bench/results.tsv`.
+     holder of the route it would take. It takes the route only if it passes every task the
+     holder passed, at a higher score for no more cost per task (or within 1% for less). Results append to `bench/results.tsv`.
   4. Redo the route table and "Why these picks". Bump the snapshot date.
   5. For a new Opus, update `model:` in `agents/opus-implementer.md`.
   6. Commit, then run `model_watch.py ack`.

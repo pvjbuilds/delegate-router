@@ -64,6 +64,13 @@ another model the user already pays for, picked from `skills/delegate/ROUTING.md
 - 2026-11-19 (maintainer): no paid score source, ever. The repo is for anyone on the internet and the
   maintainer does not keep routes current for them; it is a framework in which each user's own agent
   re-checks routes when a lab releases models. AA Pro is out; free-tier gaps get a free fallback.
+- 2026-11-20 (maintainer): GPT-6.2 Sol at medium replaces GPT-6.1 Sol in every row, though the bench
+  rule alone would keep 6.1 (6.2 medium costs ~$0.02 more per task, both 10/10). GPT-6.2 Astra low
+  takes Hard reasoning and Review.
+- 2026-11-20: cost per task prices cached input at the cache-hit rate (AA `price_1m_cache_hit_tokens`,
+  bench `cached_tokens`); missing data on either side puts both on full rate. The figure is a mean per
+  task, and a challenger must pass every task the holder passed. Codex follow-up rounds resume the
+  session (SKILL.md).
 - 2026-09-30: The installer prints the Codex `network_access` and SessionStart hook snippets
   instead of editing user settings.
 - Verified live 2026-09-30: `agy -p --model <slug> --sandbox` and the `claude -p
@@ -109,13 +116,21 @@ mutation-checked 2/2); README now leads with Jev. Live: 763 AA records. Known li
 Review is judged; a free per-row fallback is a v1.5 candidate. The model list for proposals
 comes from Anthropic's public models page, so a model the user can't use (Fable 5.2) can be
 proposed. `skills/delegate/SKILL.md` has an uncommitted, maintainer-only edit that must not ship.
-2026-11-20: routes refreshed for GPT-6.2 (commit cacd50c, local, not pushed): GPT-6.2 Astra low takes
-Hard reasoning and Review (bench tasks 6, 9: $3.00 vs $3.50); GPT-6.2 Sol high passed 6, 9, 10 on ~2x
-GPT-6.1 Sol's tokens, so it is not routed. The live check then proposes Review -> GPT-6.2 Sol high
-(index 54.9 vs 45.7, cheaper on the code bench), which `AUTO_ROUTE=1` applies; the bench has no review
-task, so Review cost is measured on code tasks. The "$x/task" figure is the total over the holder's
-bench tasks, not a per-task mean (wording fix for v1.5).
-Candidates for v1.5: opt-in auto-update (the background check runs `git pull --ff-only` on new
+2026-11-20: v1.5.0 released (maintainer's go 2026-11-20 01:55, conditional on the review): GPT-6.2
+routes, cache-priced cost per task, per-task pass gate, `cached_tokens` in bench (backfilled from
+Codex session logs, 60/60 rows), resume for follow-up rounds, README rewritten (Jev first, SEO FAQ),
+diagram with a Jev lane. GPT-6.2 Astra medium review, two rounds (9 then 7 findings; round 2 resumed
+the round 1 thread, sandbox stayed read-only in both turns). Fixed with tests, mutation-checked
+(9/10 then 1/1 after a boundary test; 6/6): a known failure now blocks a partial bench; an
+unreadable, blank or impossible cached count is unknown, never zero; unreadable token columns no
+longer hide a FAIL row; `tokens()` blanks missing totals; `write_log` upgrades a pre-cached log and
+repairs an empty file or a missing final newline; ROUTING.md and README wording matches the gate.
+Round 2's fixes were not re-reviewed. Not fixed, on purpose: bench adds `reasoning_output_tokens` to
+output (Codex may already count them in `output_tokens`; behaviour since v1.4, historical rows
+recorded that way; a v1.6 candidate with a re-bench); concurrent bench runs on a legacy log (no
+locking). Live dry-run: Review -> GPT-6.2 Sol high at $0.108 vs $0.261/task; the maintainer pins
+Review to Astra in his LOCAL.md.
+Candidates for v1.6: opt-in auto-update (the background check runs `git pull --ff-only` on new
 tagged releases; off by default; needs a cross-provider review), a bench task for long agentic
 work, bench hardening (run model CLIs with integrations off, a stronger task 3, record CLI
 timeouts apart from check failures), keep custom Codex providers in delegate calls (`--ignore-user-config` drops them today),

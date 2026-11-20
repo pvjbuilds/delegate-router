@@ -386,7 +386,7 @@ def test_cost_per_task_comes_from_bench_tokens():
     assert "ROUTE" not in out, out
     tsv([("gpt-6-sol", "high", t, 100) for t in "12"] + [("claude-opus-6", "medium", t, 150) for t in "12"])
     out = again({"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (75, 5)}, AUTO_ROUTE="1")
-    assert "-> claude-opus-6 medium (applied). coding index 75 vs 70, $0.0015/task vs $0.002/task" in out, out
+    assert "-> claude-opus-6 medium (applied). coding index 75 vs 70, $0.00075/task vs $0.001/task" in out, out
 
 
 def test_each_row_is_judged_on_its_own_benchmark():
@@ -554,6 +554,140 @@ def test_bench_gate_uses_the_holders_tasks_and_known_tokens():
     tsv([("h", "high", "1", 100)])
     bench.write_text(bench.read_text() + "d\tc\tc\thigh\t1\tFAIL\t1\t50\t0\n")
     assert mw.bench_cost(mw.bench_rows(), ("c", "high"), ("h", "high"), price, price) is False
+
+
+def tsv_cached(rows):
+    """rows: (model, effort, task, result, input incl. cached, cached) -> results.tsv with the cached column."""
+    bench.write_text("date\tcli\tmodel\teffort\ttask\tresult\tseconds\tinput_tokens\toutput_tokens\tcached_tokens\n" + "".join(
+        "d\tc\t{}\t{}\t{}\t{}\t1\t{}\t0\t{}\n".format(*r) for r in rows))
+
+
+def test_cached_input_is_priced_at_the_cache_hit_rate():
+    mw = mw_module()
+    price = {"in": 10, "out": 10, "cached": 1}
+    tsv_cached([("h", "high", "1", "PASS", 100, 0), ("c", "high", "1", "PASS", 150, 120)])
+    assert mw.bench_cost(mw.bench_rows(), ("c", "high"), ("h", "high"), price, price) == (0.00042, 0.001)
+
+
+def test_without_a_cached_count_or_price_both_sides_pay_full_rate():
+    mw = mw_module()
+    tsv_cached([("h", "high", "1", "PASS", 100, 0), ("c", "high", "1", "PASS", 150, 120)])
+    full = {"in": 10, "out": 10}
+    assert mw.bench_cost(mw.bench_rows(), ("c", "high"), ("h", "high"), full, {**full, "cached": 1}) == (0.0015, 0.001)
+    assert mw.bench_cost(mw.bench_rows(), ("c", "high"), ("h", "high"), {**full, "cached": 1}, full) == (0.0015, 0.001)
+    tsv_cached([("h", "high", "1", "PASS", 100, ""), ("c", "high", "1", "PASS", 150, 120)])
+    price = {"in": 10, "out": 10, "cached": 1}
+    assert mw.bench_cost(mw.bench_rows(), ("c", "high"), ("h", "high"), price, price) == (0.0015, 0.001)
+
+
+def test_bench_cost_is_a_mean_per_task():
+    mw = mw_module()
+    price = {"in": 10, "out": 10}
+    tsv([("h", "high", t, 100) for t in "12"] + [("c", "high", t, 50) for t in "12"])
+    assert mw.bench_cost(mw.bench_rows(), ("c", "high"), ("h", "high"), price, price) == (0.0005, 0.001)
+
+
+def test_a_challenger_must_pass_every_task_the_holder_passed():
+    mw = mw_module()
+    price = {"in": 10, "out": 10}
+    tsv_cached([("h", "high", "1", "PASS", 100, 0), ("h", "high", "2", "FAIL", 100, 0),
+                ("c", "high", "1", "FAIL", 50, 0), ("c", "high", "2", "PASS", 50, 0)])
+    assert mw.bench_cost(mw.bench_rows(), ("c", "high"), ("h", "high"), price, price) is False
+
+
+def bench_module():
+    sys.path.insert(0, str(REPO / "bench"))
+    import bench as b
+    return b
+
+
+def test_a_known_failure_blocks_even_when_the_bench_is_partial():
+    mw = mw_module()
+    price = {"in": 10, "out": 10}
+    tsv_cached([("h", "high", "1", "PASS", 100, 0), ("h", "high", "2", "PASS", 100, 0), ("c", "high", "1", "FAIL", 50, 0)])
+    assert mw.bench_cost(mw.bench_rows(), ("c", "high"), ("h", "high"), price, price) is False
+
+
+def test_an_unreadable_cached_count_is_unknown_and_never_hides_the_row():
+    mw = mw_module()
+    price = {"in": 10, "out": 10, "cached": 1}
+    tsv_cached([("h", "high", "1", "PASS", 100, 0), ("c", "high", "1", "PASS", 50, 0), ("c", "high", "1", "FAIL", 50, "NA")])
+    assert mw.bench_cost(mw.bench_rows(), ("c", "high"), ("h", "high"), price, price) is False
+    tsv_cached([("h", "high", "1", "PASS", 100, 0), ("c", "high", "1", "PASS", 50, "NA")])
+    assert mw.bench_cost(mw.bench_rows(), ("c", "high"), ("h", "high"), price, price) == (0.0005, 0.001)
+
+
+def test_a_cached_count_above_the_input_is_unknown():
+    mw = mw_module()
+    price = {"in": 10, "out": 10, "cached": 1}
+    tsv_cached([("h", "high", "1", "PASS", 100, 0), ("c", "high", "1", "PASS", 100, 200)])
+    assert mw.bench_cost(mw.bench_rows(), ("c", "high"), ("h", "high"), price, price) == (0.001, 0.001)
+    tsv_cached([("h", "high", "1", "PASS", 100, 0), ("c", "high", "1", "PASS", 100, 100)])  # all cached is valid
+    assert mw.bench_cost(mw.bench_rows(), ("c", "high"), ("h", "high"), price, price) == (0.0001, 0.001)
+    tsv_cached([("h", "high", "1", "PASS", 100, 0), ("c", "high", "1", "PASS", 100, -5)])
+    assert mw.bench_cost(mw.bench_rows(), ("c", "high"), ("h", "high"), price, price) == (0.001, 0.001)
+
+
+def test_bench_leaves_cached_blank_when_the_cli_reports_none():
+    b = bench_module()
+    assert b.tokens('{"usage":{"input_tokens":100,"output_tokens":1}}') == (100, 1, "")
+    assert b.tokens('{"usage":{"input_tokens":100,"output_tokens":1,"cached_input_tokens":null}}') == (100, 1, "")
+    assert b.tokens('{"usage":{"input_tokens":100,"output_tokens":1,"cached_input_tokens":0}}') == (100, 1, 0)
+
+
+def test_bench_upgrades_a_pre_cached_log_before_appending():
+    b = bench_module()
+    log = tmp / "legacy.tsv"
+    log.write_text("date\tcli\tmodel\teffort\ttask\tresult\tseconds\tinput_tokens\toutput_tokens\nd\tc\tm\thigh\t1\tPASS\t1\t5\t6\n")
+    b.write_log(log, [["d", "c", "m", "high", "2", "PASS", 1, 7, 8, 3]])
+    lines = [l.split("\t") for l in log.read_text().splitlines()]
+    assert lines[0][-1] == "cached_tokens" and lines[1] == ["d", "c", "m", "high", "1", "PASS", "1", "5", "6", ""] and lines[2][-1] == "3", lines
+
+
+def test_a_failed_rerun_with_unreadable_tokens_still_counts_as_failed():
+    mw = mw_module()
+    price = {"in": 10, "out": 10, "cached": 1}
+    tsv_cached([("h", "high", "1", "PASS", 100, 0), ("c", "high", "1", "PASS", 50, 0), ("c", "high", "1", "FAIL", "NA", 2)])
+    assert mw.bench_cost(mw.bench_rows(), ("c", "high"), ("h", "high"), price, price) is False
+
+
+def test_bench_tokens_unreadable_totals_are_blank_not_zero():
+    b = bench_module()
+    assert b.tokens('{"usage":{"input_tokens":null,"output_tokens":5}}') == ("", "", "")
+    assert b.tokens('{"usage":{"input_tokens":9,"output_tokens":"x"}}') == ("", "", "")
+    assert b.tokens('{"usage":{"input_tokens":9,"output_tokens":1,"cached_input_tokens":"NA"}}') == (9, 1, "")
+
+
+def test_bench_log_survives_an_empty_file_and_a_missing_final_newline():
+    b = bench_module()
+    row = [["d", "c", "m", "high", "2", "PASS", 1, 7, 8, 3]]
+    log = tmp / "empty.tsv"
+    log.write_text("")
+    b.write_log(log, row)
+    assert log.read_text().splitlines()[0] == b.HEADER and len(log.read_text().splitlines()) == 2
+    log.write_text(b.HEADER + "\nd\tc\tm\thigh\t1\tPASS\t1\t5\t6\t4")
+    b.write_log(log, row)
+    assert [len(l.split("\t")) for l in log.read_text().splitlines()] == [10, 10, 10], log.read_text()
+
+
+def test_aa_cache_hit_price_is_kept():
+    aa.write_text(json.dumps({"data": [{"slug": "gpt-6-sol-high", "evaluations": {"artificial_analysis_coding_index": 70},
+                                        "pricing": {"price_1m_input_tokens": 2, "price_1m_output_tokens": 10,
+                                                    "price_1m_cache_hit_tokens": 0.1}}]}))
+    shutil.rmtree(tmp / "state", ignore_errors=True)
+    (skill / "ROUTING.md").write_text(TABLE)
+    watch("run", **KEY)
+    assert json.loads((tmp / "state/state.json").read_text())["snapshot"]["scores"]["gpt-6-sol-high"]["cached"] == 0.1
+
+
+def test_bench_records_cached_input_apart():
+    sys.path.insert(0, str(REPO / "bench"))
+    import bench as b
+    codex = '{"type":"turn.completed","usage":{"input_tokens":900,"cached_input_tokens":800,"output_tokens":20,"reasoning_output_tokens":5}}'
+    assert b.tokens(codex) == (900, 25, 800)
+    claude = '{"usage":{"input_tokens":10,"cache_read_input_tokens":700,"cache_creation_input_tokens":90,"output_tokens":3}}'
+    assert b.tokens(claude) == (800, 3, 700)
+    assert b.tokens("no usage here") == ("", "", "")
 
 
 def test_non_numeric_scores_become_none():

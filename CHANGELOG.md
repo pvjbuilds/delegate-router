@@ -1,5 +1,31 @@
 # Changelog
 
+## v1.5.0 (2026-11-20)
+
+**Routes**
+- GPT-6.2 Astra takes Hard reasoning and Review (low effort). On our bench it passed 10/10, as
+  GPT-6 Astra did, for less per task and faster.
+- GPT-6.2 Sol at medium effort replaces GPT-6.1 Sol in every row (the maintainer's pick): it
+  passed 10/10 and scores above GPT-6.1 Sol at high on independent indexes.
+
+**Changed**
+- Cost per task prices cached input at the model's cache-hit rate. `bench.py` records a
+  `cached_tokens` column; AA's `price_1m_cache_hit_tokens` is kept with each score. Rows from
+  before the column, or a model with no cache price, put both sides on the full input rate.
+- The `$x/task` figure is a mean per task; it was the total over the holder's tasks.
+- A challenger must pass every bench task the holder passed; passing as many in total is no
+  longer enough.
+
+**Fixed (found in review)**
+- A challenger's known failure on a task the holder passed counts even when its bench is partial.
+- A blank, unreadable or impossible `cached_tokens` value is treated as unknown (both sides pay the
+  full input rate), and an unreadable token column no longer hides a FAIL row.
+- `bench.py` writes a blank cached count when the CLI reports none, upgrades a `results.tsv` from
+  before the column, and repairs an empty file or a missing final newline.
+
+**Docs**
+- README rewritten: Jev up front, FAQ for common questions, current routes, refreshed diagram.
+
 ## v1.4.2 (2026-11-20)
 
 **Fixed**

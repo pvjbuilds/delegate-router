@@ -2,21 +2,25 @@
   "schema_version": 2,
   "diagram_type": "workflow",
   "meta": {
-    "title": "delegate-router: how a task flows",
+    "title": "delegate-router: one agent thinks, another types",
     "quality_profile": "showcase"
   },
   "lanes": [
     {
       "id": "host",
-      "label": "Host agent: Claude Code or Codex, following the delegate skill"
+      "label": "Host agent: Claude Code or Codex CLI, following the delegate skill"
+    },
+    {
+      "id": "jev",
+      "label": "Jev: typed judgement, about $0.0001 a call (optional)"
     },
     {
       "id": "delegates",
-      "label": "Delegate model: another subscription first"
+      "label": "Delegate model: another of your subscriptions first"
     },
     {
       "id": "support",
-      "label": "Kept current (optional)",
+      "label": "Kept current by your own agent",
       "variant": "exception"
     }
   ],
@@ -62,7 +66,7 @@
       "col": 3,
       "type": "frontend",
       "label": "Write the spec",
-      "sublabel": "every decision made",
+      "sublabel": "Jev-ranked files only",
       "width": 184
     },
     {
@@ -80,7 +84,7 @@
       "col": 4,
       "type": "cloud",
       "label": "Delegate types",
-      "sublabel": "codex / agy / claude -p",
+      "sublabel": "Codex · Gemini (agy) · Opus",
       "width": 184
     },
     {
@@ -89,7 +93,7 @@
       "col": 1,
       "type": "messagebus",
       "label": "model_watch.py",
-      "sublabel": "new models, routes, 12 h",
+      "sublabel": "free scores, releases, 12 h",
       "width": 184
     },
     {
@@ -103,11 +107,11 @@
     },
     {
       "id": "scout",
-      "lane": "support",
+      "lane": "jev",
       "col": 3,
       "type": "messagebus",
-      "label": "Jev scout",
-      "sublabel": "which files matter",
+      "label": "Jev file scout",
+      "sublabel": "reads 5 files, not 40",
       "width": 184
     },
     {
@@ -116,7 +120,16 @@
       "col": 0,
       "type": "database",
       "label": "bench/",
-      "sublabel": "10 tasks, cost per task",
+      "sublabel": "10 tasks, cache-priced cost",
+      "width": 184
+    },
+    {
+      "id": "jevnotes",
+      "lane": "jev",
+      "col": 1,
+      "type": "messagebus",
+      "label": "Jev release judge",
+      "sublabel": "real release or preview?",
       "width": 184
     }
   ],
@@ -174,15 +187,21 @@
       "to": "spec",
       "label": "top files",
       "variant": "dashed",
-      "role": "async",
-      "fromSide": "top",
-      "toSide": "bottom"
+      "role": "async"
     },
     {
       "id": "e-bench-watch",
       "from": "bench",
       "to": "watch",
       "label": "gates",
+      "variant": "dashed",
+      "role": "async"
+    },
+    {
+      "id": "e-jevnotes-watch",
+      "from": "jevnotes",
+      "to": "watch",
+      "label": "real releases",
       "variant": "dashed",
       "role": "async"
     }

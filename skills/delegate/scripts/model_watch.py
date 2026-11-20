@@ -320,7 +320,8 @@ def snapshot():
                     scores[m["slug"]] = {"coding": get("artificial_analysis_coding_index"),
                                          "reasoning": get("artificial_analysis_intelligence_index"),
                                          "terminal": get("terminalbench_v4_0"), "hle": get("hle"),
-                                         "price": price, "in": pin, "out": pout}
+                                         "price": price, "in": pin, "out": pout,
+                                         "cached": num(pr.get("price_1m_cache_hit_tokens"))}
                 more = isinstance(pg, dict) and pg.get("has_more") is True
                 if not more:
                     break
@@ -367,7 +368,8 @@ def table():
 
 
 def bench_rows():
-    """{(model, effort): {task: (passed, tokens or None, (input, output) or None)}}, the latest row per task."""
+    """{(model, effort): {task: (passed, tokens or None, (input, output, cached or None) or None)}}, the latest row per task.
+    input counts cached reads too; cached is None on rows from before the cached_tokens column."""
     out = {}
     try:
         lines = BENCH.read_text().splitlines()
@@ -377,29 +379,45 @@ def bench_rows():
     for line in lines[1:]:
         r = dict(zip(head, line.split("\t")))
         try:
-            i, o = r.get("input_tokens"), r.get("output_tokens")
-            tokens = int(i) + int(o) if i and o else None
-            io = (int(i), int(o)) if i and o else None
-            out.setdefault((r["model"], r["effort"]), {})[r["task"]] = (r["result"] == "PASS", tokens, io)
-        except (KeyError, ValueError):
+            key, task, passed = (r["model"], r["effort"]), r["task"], r["result"] == "PASS"
+        except KeyError:
             continue
+        try:  # the verdict stands even when the token columns can't be read
+            i, o = int(r.get("input_tokens")), int(r.get("output_tokens"))
+            try:
+                c = int(r.get("cached_tokens"))
+            except (TypeError, ValueError):
+                c = None  # blank or unreadable: unknown, not zero
+            if c is not None and not 0 <= c <= i:
+                c = None  # more cached than input is a bad count
+            tokens, io = i + o, (i, o, c)
+        except (TypeError, ValueError):
+            tokens, io = None, None
+        out.setdefault(key, {})[task] = (passed, tokens, io)
     return out
 
 
 def bench_cost(rows, c, h, cp, hp):
-    """Over H's bench tasks: None if C didn't run them all, False if it passed fewer; else (C's, H's) cost of
-    those runs in $, from the recorded tokens and each model's per-1M prices (None where a count or price is missing)."""
+    """Over H's bench tasks: None if C didn't run them all, False if it failed a task H passed; else (C's, H's)
+    mean cost per task in $, from the recorded tokens and each model's per-1M prices (None where a count or
+    price is missing). Cached input is priced at the cache-hit rate only when every run on both sides has a
+    cached count and both models a cache price; otherwise both pay the full input rate, so neither is favoured."""
     rh = rows.get(h, {})
     rc = {t: v for t, v in rows.get(c, {}).items() if t in rh}
-    if not rh or set(rc) != set(rh):
+    if not rh:
         return None
-    if sum(v[0] for v in rc.values()) < sum(v[0] for v in rh.values()):
+    if any(rh[t][0] and not rc[t][0] for t in rc):  # a known failure counts even on a partial bench
         return False
+    if set(rc) != set(rh):
+        return None
+    runs = list(rc.values()) + list(rh.values())
+    split = all(v[2] and v[2][2] is not None for v in runs) and all((p or {}).get("cached") is not None for p in (cp, hp))
 
     def cost(runs, p):
         if any(v[2] is None for v in runs) or not p or p.get("in") is None or p.get("out") is None:
             return None
-        return sum(v[2][0] * p["in"] + v[2][1] * p["out"] for v in runs) / 1e6
+        return sum((v[2][0] - v[2][2]) * p["in"] + v[2][2] * p["cached"] + v[2][1] * p["out"] if split else
+                   v[2][0] * p["in"] + v[2][1] * p["out"] for v in runs) / 1e6 / len(runs)
     return cost(rc.values(), cp), cost(rh.values(), hp)
 
 
