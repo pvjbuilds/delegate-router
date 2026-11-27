@@ -59,3 +59,11 @@ date	cli	model	effort	task	result	seconds	input_tokens	output_tokens	cached_toke
 2026-11-20 01:15	codex	gpt-6-astra	low	10-migrate	PASS	62	262940	1189	234752
 2026-11-20 01:16	codex	gpt-6.2-sol	medium	9-semver	PASS	75	227066	3671	200192
 2026-11-20 01:17	codex	gpt-6.2-sol	medium	10-migrate	PASS	56	261333	1597	210304
+2026-11-27 07:38	agy	gemini-4-hydrogen-high	high	1-function	PASS	31			
+2026-11-27 07:38	agy	gemini-4-hydrogen-high	high	5-extract	PASS	30			
+2026-11-27 07:39	agy	gemini-4-hydrogen-high	high	6-bugfix	PASS	50			
+2026-11-27 07:40	agy	gemini-4-hydrogen-high	high	8-image	PASS	36			
+2026-11-27 07:41	agy	gemini-3.8-flash-high	high	1-function	PASS	70			
+2026-11-27 07:42	agy	gemini-3.8-flash-high	high	5-extract	PASS	53			
+2026-11-27 07:48	agy	gemini-3.8-flash-high	high	6-bugfix	PASS	344			
+2026-11-27 07:51	agy	gemini-3.8-flash-high	high	8-image	PASS	199			

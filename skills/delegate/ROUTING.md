@@ -1,6 +1,6 @@
 # Routing map: which model gets which task
 
-Snapshot: 2026-11-20
+Snapshot: 2026-11-27
 
 The delegate skill reads this file to pick a model. Benchmarks are a prior, not proof: **a
 check run on the actual task beats any benchmark.** Neutral benchmarks pick a new model's
@@ -75,6 +75,9 @@ In our own words; the numbers live on the trackers linked at the bottom.
 - **GPT-6.1 Sol** is replaced by GPT-6.2 Sol (2026-11-20).
 - **Gemini 3.8 Flash** is fast and cheap, and strong at video and other media. It is weak at
   multi-step agent work, so it runs in plan mode and only its text output is used.
+- **Gemini 4 Hydrogen** (`gemini-4-hydrogen-high`, Google plan, 2026-11-27) scores far above 3.8 Flash on
+  independent indexes and passed the same bench tasks in much less time. Not routed yet: `agy`
+  reports no token counts, so its cost per task is unmeasured, and its price per token is higher.
 - **GPT-6.1 Terra** also reads images. Independent multimodal scores put it at or near the top
   of the field, and it is cheap per task.
   `codex exec -i` takes image files only, so PDF, video and audio stay with Gemini.
