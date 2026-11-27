@@ -42,9 +42,9 @@ No proxy, no API keys, no account with us. It runs on the coding CLIs you alread
   verifiable, contained), a never-delegate list (debugging, architecture, security code,
   anything under ~40 lines), and a delegate's "done" never counts as evidence.
 
-**New in v1.5.0:** GPT-6.2 Astra takes hard reasoning and review, GPT-6.2 Sol (medium) becomes
-the second coder, and the route check prices cached input properly and compares true per-task
-means. See the [changelog](CHANGELOG.md).
+**New in v1.6.0:** the bench counts Codex reasoning tokens once, and a model catalog that comes
+back empty or unread no longer moves a route. Gemini 4 Hydrogen is benched, not routed yet. See the
+[changelog](CHANGELOG.md).
 
 ## Requirements
 

@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.6.0 (2026-11-27)
+
+**Fixed**
+- The bench counted Codex reasoning tokens twice. Codex's `output_tokens` already include
+  `reasoning_output_tokens`, so they are no longer added on top. Codex rows recorded before this
+  release overstate output by the reasoning share (about 5% on a sample run).
+- An incomplete model catalog no longer moves a route. An empty catalog read keeps the last good
+  list (empty lists saved by earlier versions are cleared), and a model whose CLI is installed but
+  whose catalog was never read counts as unknown, not gone: its override stays and the row's
+  default does not fail over.
+
+**Routes**
+- Gemini 4 Hydrogen is benched and listed, not routed: `agy` reports no token counts, so its cost
+  per task is unmeasured.
+
 ## v1.5.0 (2026-11-20)
 
 **Routes**
