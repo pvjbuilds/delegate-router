@@ -130,6 +130,19 @@ output (Codex may already count them in `output_tokens`; behaviour since v1.4, h
 recorded that way; a v1.6 candidate with a re-bench); concurrent bench runs on a legacy log (no
 locking). Live dry-run: Review -> GPT-6.2 Sol high at $0.108 vs $0.261/task; the maintainer pins
 Review to Astra in his LOCAL.md.
+2026-11-27: branch `v1.6-fixes` (local, not merged, not tagged, not pushed): (1) bench no longer adds
+`reasoning_output_tokens` to output: Codex `output_tokens` already include them (total = input + output in
+38/38 session logs); the old test expecting the doubled count was wrong. Historical Codex rows in `results.tsv`
+still carry the double count (~5% extra output charge); re-bench or backfill is the maintainer's call.
+(2) An incomplete catalog never moves a route: an empty read keeps the last good list (and empty lists saved by
+v1.5 are cleared), and a model whose catalog CLI is installed but unread is unknown, not gone, so its override
+stays and the holder doesn't fail over. Tests use a list without the holder to mean "holder gone". Tests first,
+mutation-checked 9/9 (3 misses got a test), GPT-6.2 Astra low review, one round (6 findings: 1 fixed;
+deferred: `gone()` guesses the CLI from the model prefix instead of the row's CLI, failover can skip a candidate
+whose catalog is unread; known limit: a Codex catalog with every model hidden reads as broken; 1 rejected).
+The branch also holds `dbd2482` (Gemini 4 Hydrogen benched, not routed; data only). Live run on throwaway
+state 2026-11-27: catalogs codex 10 / agy 10 / claude 23, no drop; same Review proposal as the v1.5 dry-run.
+To release, the maintainer says: "release v1.6-fixes as v1.6.0".
 Candidates for v1.6: opt-in auto-update (the background check runs `git pull --ff-only` on new
 tagged releases; off by default; needs a cross-provider review), a bench task for long agentic
 work, bench hardening (run model CLIs with integrations off, a stronger task 3, record CLI

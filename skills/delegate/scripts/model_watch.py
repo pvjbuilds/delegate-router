@@ -441,6 +441,12 @@ def judge(st, snap, cat):
     scores, aa = (snap or {}).get("scores", {}), (snap or {}).get("source") == "aa"
     live = {c: ns for c, ns in cat.items() if binary(c) and shutil.which(binary(c))}  # a web list alone doesn't count
     names = {n for ns in live.values() for n in ns}
+
+    def gone(m):  # listed nowhere, and its own CLI's catalog was read; an unread catalog proves nothing
+        if not isinstance(m, str):
+            return True
+        c = provider(m)
+        return m not in names and not (c and binary(c) and shutil.which(binary(c)) and c not in cat)
     owner = {n: c for c, ns in live.items() for n in ns}
     rows, auto, changed, unjudged = bench_rows(), ON("AUTO_ROUTE", "0"), set(), []
     for k in ("routes", "proposals"):
@@ -463,10 +469,10 @@ def judge(st, snap, cat):
         dm, de, _ = cands[0]
         default = "{} {}".format(dm, de)
         ov = routes.get(row)
-        if ov and (ov.get("model") not in names or (ov.get("source") == "catalog" and dm in names)):
+        if ov and (gone(ov.get("model")) or (ov.get("source") == "catalog" and dm in names)):
             drop(row)  # the override left the catalogs, or the default it stood in for is back
             ov = None
-        if not ov and names and dm not in names:  # the holder left every catalog: the next listed candidate moves up
+        if not ov and names and gone(dm):  # the holder left every catalog: the next listed candidate moves up
             nxt = next((c for c in cands[1:] if c[0] in names), None)
             if nxt:
                 routes[row] = {"model": nxt[0], "effort": nxt[1], "cli": nxt[2], "index": "holder not in any CLI catalog",
@@ -631,9 +637,11 @@ def run(if_due=False):
     save(st)  # saved before going online, so a killed run still counts as an attempt
     first_run = "acked" not in st
     cat = st.setdefault("catalog", {})
+    for cli in [c for c, ns in cat.items() if not ns]:  # v1.5 stored empty reads; they prove nothing
+        del cat[cli]
     for cli, fn in (("codex", codex_catalog), ("agy", agy_catalog), ("claude", claude_catalog)):
         names = fn()
-        if names is not None:  # a failed read keeps the last good list
+        if names:  # an empty list is a broken read (redesigned page or signed-out CLI); keep the last good list
             cat[cli] = names
     if time.time() < DEADLINE[0]:
         try:

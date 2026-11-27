@@ -53,7 +53,8 @@ def tokens(stdout):
     inp = z("input_tokens") + z("cache_read_input_tokens") + z("cache_creation_input_tokens")
     # Codex says cached_input_tokens, Claude cache_read_input_tokens; neither readable means not measured
     has = num("cached_input_tokens") is not None or num("cache_read_input_tokens") is not None
-    return inp, z("output_tokens") + z("reasoning_output_tokens"), z("cached_input_tokens") + z("cache_read_input_tokens") if has else ""
+    # Codex output_tokens already include reasoning.
+    return inp, z("output_tokens"), z("cached_input_tokens") + z("cache_read_input_tokens") if has else ""
 
 
 HEADER = "date\tcli\tmodel\teffort\ttask\tresult\tseconds\tinput_tokens\toutput_tokens\tcached_tokens"

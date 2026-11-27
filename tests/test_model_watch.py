@@ -411,7 +411,7 @@ def test_xhigh_max_and_uncatalogued_models_are_never_picked():
 
 
 def test_holder_gone_from_catalogs_moves_the_next_candidate_up():
-    out = routes({"gpt-6-sol-high": (70, 10)}, CODEX_BIN=stub(bindir / "codex2", 'echo \'{"models":[]}\'\n'))
+    out = routes({"gpt-6-sol-high": (70, 10)}, CODEX_BIN=stub(bindir / "codex2", 'echo \'{"models":[{"slug":"gpt-9","visibility":"list"}]}\'\n'))
     assert "ROUTE Bulk code: gpt-6-sol high -> claude-opus-5-5 medium (applied)" in out, out
 
 
@@ -684,7 +684,7 @@ def test_bench_records_cached_input_apart():
     sys.path.insert(0, str(REPO / "bench"))
     import bench as b
     codex = '{"type":"turn.completed","usage":{"input_tokens":900,"cached_input_tokens":800,"output_tokens":20,"reasoning_output_tokens":5}}'
-    assert b.tokens(codex) == (900, 25, 800)
+    assert b.tokens(codex) == (900, 20, 800)  # output_tokens already holds the 5 reasoning tokens
     claude = '{"usage":{"input_tokens":10,"cache_read_input_tokens":700,"cache_creation_input_tokens":90,"output_tokens":3}}'
     assert b.tokens(claude) == (800, 3, 700)
     assert b.tokens("no usage here") == ("", "", "")
@@ -720,7 +720,7 @@ def test_bare_record_is_ignored_when_effort_records_exist():
 def test_failed_fetch_still_fails_over_on_the_last_snapshot():
     routes({"gpt-6-sol-high": (70, 10)})
     aa.write_text("not json")
-    empty = stub(bindir / "codex2", 'echo \'{"models":[]}\'\n')
+    empty = stub(bindir / "codex2", 'echo \'{"models":[{"slug":"gpt-9","visibility":"list"}]}\'\n')
     watch("run", CODEX_BIN=empty, **KEY)
     assert "-> claude-opus-5-5 medium (applied)" in watch("routes")
 
@@ -759,7 +759,7 @@ def test_failover_needs_no_snapshot_at_all():
     page.write_text("<code>claude-opus-5-5</code>")
     notes.write_text("")
     aa.write_text("not json")
-    empty = stub(bindir / "codex2", 'echo \'{"models":[]}\'\n')
+    empty = stub(bindir / "codex2", 'echo \'{"models":[{"slug":"gpt-9","visibility":"list"}]}\'\n')
     watch("run", CODEX_BIN=empty, **KEY)
     assert "-> claude-opus-5-5 medium (applied)" in watch("routes")
 
@@ -857,13 +857,13 @@ def test_an_unfinished_or_malformed_aa_catalogue_is_a_failure():
 
 def test_a_catalog_failover_drops_the_old_proposal():
     assert "(proposed)" in routes({"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (75, 10)}, "<code>claude-opus-6</code>")
-    watch("run", CODEX_BIN=stub(bindir / "codex3", 'echo \'{"models":[]}\'\n'), **KEY)
+    watch("run", CODEX_BIN=stub(bindir / "codex3", 'echo \'{"models":[{"slug":"gpt-9","visibility":"list"}]}\'\n'), **KEY)
     out = watch("routes")
     assert "(applied)" in out and "(proposed)" not in out, out
 
 
 def test_the_default_coming_back_drops_a_proposal_made_against_the_fallback():
-    routes({"gpt-6-sol-high": (70, 10)}, CODEX_BIN=stub(bindir / "codex2", 'echo \'{"models":[]}\'\n'))
+    routes({"gpt-6-sol-high": (70, 10)}, CODEX_BIN=stub(bindir / "codex2", 'echo \'{"models":[{"slug":"gpt-9","visibility":"list"}]}\'\n'))
     st = json.loads((tmp / "state/state.json").read_text())
     st["proposals"]["Bulk code"] = {"model": "claude-opus-6", "effort": "medium", "cli": "claude", "index": "x",
                                     "source": "aa", "was": "claude-opus-5-5 medium", "at": "2026-11-01"}
@@ -878,14 +878,14 @@ def test_a_failover_that_also_drops_a_proposal_counts_one_change():
     rows = {"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (75, 10)}
     assert "(proposed)" in routes(rows, "<code>claude-opus-6</code>")
     scores(rows, 0.8)
-    watch("run", CODEX_BIN=stub(bindir / "codex3", 'echo \'{"models":[]}\'\n'), **KEY)
+    watch("run", CODEX_BIN=stub(bindir / "codex3", 'echo \'{"models":[{"slug":"gpt-9","visibility":"list"}]}\'\n'), **KEY)
     assert "1 change(s)" in watch("status"), watch("status")
 
 
 def test_the_change_count_is_rows_that_moved():
     routes({"gpt-6-sol-high": (70, 10)})
     scores({"gpt-6-sol-high": (70, 10)}, 0.8)
-    watch("run", CODEX_BIN=stub(bindir / "codex4", 'echo \'{"models":[]}\'\n'), **KEY)
+    watch("run", CODEX_BIN=stub(bindir / "codex4", 'echo \'{"models":[{"slug":"gpt-9","visibility":"list"}]}\'\n'), **KEY)
     assert "1 change(s)" in watch("status"), watch("status")  # a failover alone
     routes({"gpt-6-sol-high": (70, 10)})
     aa.write_text(json.dumps({"data": [{"slug": "gpt-6-sol-high", "evaluations": {"artificial_analysis_intelligence_index": 40}}]}))
@@ -925,6 +925,72 @@ def test_aa_v2_free_endpoint_is_read_page_by_page_with_a_blended_price():
     assert asked == ["https://aa.test/m", "https://aa.test/m?page=2"], asked
     assert snap["scores"]["a-high"]["coding"] == 40 and snap["scores"]["a-high"]["price"] == 4.0, snap  # (3*2+10)/4
     assert snap["scores"]["b-high"]["reasoning"] == 55 and snap["scores"]["b-high"]["price"] == 2.0, snap
+
+
+def test_bench_counts_codex_reasoning_once():
+    # Codex's output_tokens already include reasoning: total_tokens = input + output in 38/38 session logs (27 Nov 2026)
+    b = bench_module()
+    codex = '{"type":"turn.completed","usage":{"input_tokens":285914,"cached_input_tokens":249216,"output_tokens":4121,"reasoning_output_tokens":196}}'
+    assert b.tokens(codex) == (285914, 4121, 249216)
+
+
+def test_an_empty_catalog_read_keeps_the_override():
+    # a catalog that lists nothing is a broken read (page redesigned, CLI signed out), not every model retired
+    tsv([("gpt-6-sol", "high", t, 101) for t in "12"] + [("claude-opus-6", "medium", t, 50) for t in "12"])
+    rows = {"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (75, 10)}
+    scores(rows)
+    shutil.rmtree(tmp / "state", ignore_errors=True)
+    (skill / "ROUTING.md").write_text(TABLE)
+    page.write_text("<code>claude-opus-5-5</code><code>claude-opus-6</code>")
+    notes.write_text("")
+    watch("run", AUTO_ROUTE="1", **KEY)
+    assert "-> claude-opus-6 medium (applied)" in watch("routes")
+    page.write_text("<p>redesigned, no model ids</p>")
+    out = again(rows, AUTO_ROUTE="1")
+    assert "dropped" not in out and "-> claude-opus-6 medium (applied)" in out, out
+
+
+def test_holder_stays_while_its_cli_catalog_was_never_read():
+    # codex is installed but its catalog never read: the holder is unknown, not gone
+    out = routes({"gpt-6-sol-high": (70, 10)}, CODEX_BIN=stub(bindir / "codex3", "exit 1\n"))
+    assert "ROUTE" not in out, out
+    out = routes({"gpt-6-sol-high": (70, 10)}, CODEX_BIN=stub(bindir / "codex4", "echo '{\"models\":[]}'\n"))
+    assert "ROUTE" not in out, out
+
+
+def test_an_empty_catalog_saved_by_an_older_version_proves_nothing():
+    routes({"gpt-6-sol-high": (70, 10)})
+    st = json.loads((tmp / "state/state.json").read_text())
+    st["catalog"]["codex"], st["last_run"] = [], 0  # what v1.5 stored after an empty read
+    (tmp / "state/state.json").write_text(json.dumps(st))
+    watch("run", CODEX_BIN=stub(bindir / "codex5", "exit 1\n"), **KEY)
+    assert "ROUTE" not in watch("routes"), watch("routes")
+
+
+def unread_claude_override(model="claude-opus-6", **env):
+    """An applied override, then a run where the claude catalog is missing from state and the page can't be read."""
+    tsv([("gpt-6-sol", "high", t, 101) for t in "12"] + [("claude-opus-6", "medium", t, 50) for t in "12"])
+    rows = {"gpt-6-sol-high": (70, 10), "claude-opus-6-medium": (75, 10)}
+    scores(rows)
+    shutil.rmtree(tmp / "state", ignore_errors=True)
+    (skill / "ROUTING.md").write_text(TABLE)
+    page.write_text("<code>claude-opus-5-5</code><code>claude-opus-6</code>")
+    notes.write_text("")
+    watch("run", AUTO_ROUTE="1", **KEY)
+    watch("ack")
+    st = json.loads((tmp / "state/state.json").read_text())
+    st["routes"]["Bulk code"]["model"] = model
+    del st["catalog"]["claude"]
+    st["last_run"] = 0
+    (tmp / "state/state.json").write_text(json.dumps(st))
+    watch("run", DELEGATE_ROUTER_CLAUDE_URL=(tmp / "missing.html").as_uri(), **{**KEY, **env})
+    return watch("routes", **env)
+
+
+def test_an_unread_catalog_keeps_the_override_but_an_uninstalled_cli_drops_it():
+    assert "dropped" not in unread_claude_override(), "claude installed, catalog unread: the override stays"
+    assert "override claude-opus-6 medium dropped" in unread_claude_override(CLAUDE_BIN=str(tmp / "no-claude"))
+    assert "override 5 medium dropped" in unread_claude_override(5)  # a corrupt model from old state is gone
 
 
 if __name__ == "__main__":
